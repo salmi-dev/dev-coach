@@ -37,7 +37,11 @@ class BunStatement implements Statement {
   }
 
   get<T = unknown>(...params: unknown[]): T | undefined {
-    return this.stmt.get(...params) as T | undefined;
+    // bun:sqlite returns null when no row matches; @db/sqlite, node:sqlite,
+    // and better-sqlite3 all return undefined. Normalize to undefined so the
+    // adapter's contract is consistent across runtimes.
+    const result = this.stmt.get(...params);
+    return (result ?? undefined) as T | undefined;
   }
 }
 
@@ -67,7 +71,9 @@ class BunDatabase implements Database {
   }
 
   get<T = unknown>(sql: string, ...params: unknown[]): T | undefined {
-    return this.db.prepare(sql).get(...params) as T | undefined;
+    // See BunStatement.get() for why we coerce null → undefined.
+    const result = this.db.prepare(sql).get(...params);
+    return (result ?? undefined) as T | undefined;
   }
 
   transaction<T>(fn: () => T): T {

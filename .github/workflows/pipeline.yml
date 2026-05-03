@@ -272,7 +272,11 @@ jobs:
         run: |
           # Node 22 needs --experimental-strip-types to load .ts files;
           # Node 24 strips types by default.
-          node ${{ matrix.ts-flag }} --test tests/cross-runtime/
+          # node --test does not recursively discover from a bare directory
+          # path — pass explicit file paths via shell glob.
+          shopt -s nullglob
+          files=(tests/cross-runtime/*.test.ts)
+          node ${{ matrix.ts-flag }} --test "${files[@]}"
       - name: Summary
         if: always()
         run: |
