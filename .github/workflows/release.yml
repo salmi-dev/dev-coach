@@ -1,0 +1,234 @@
+name: Release
+
+run-name: >-
+  Release (${{ inputs.bump }}) — ${{ github.sha }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Semver bump level'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
+
+permissions:
+  contents: write # need to commit version bump + create tag/release
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Bump the version in deno.json, commit with [skip ci], tag, push.
+  # ---------------------------------------------------------------------------
+  bump:
+    name: Bump version
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.bump.outputs.new_version }}
+      tag: ${{ steps.bump.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Need full history + a token that can push back to main.
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute next version
+        id: bump
+        run: |
+          set -euo pipefail
+          current=$(grep -oE '"version"[[:space:]]*:[[:space:]]*"[0-9]+\.[0-9]+\.[0-9]+"' deno.json \
+            | head -1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+          if [ -z "${current}" ]; then
+            echo "::error::Could not read current version from deno.json"
+            exit 1
+          fi
+
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$current"
+          case "${{ inputs.bump }}" in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch) PATCH=$((PATCH + 1)) ;;
+            *) echo "::error::unknown bump ${{ inputs.bump }}"; exit 1 ;;
+          esac
+          new="${MAJOR}.${MINOR}.${PATCH}"
+          tag="v${new}"
+
+          echo "current=${current}"
+          echo "new=${new}"
+          echo "current_version=${current}" >> "$GITHUB_OUTPUT"
+          echo "new_version=${new}"        >> "$GITHUB_OUTPUT"
+          echo "tag=${tag}"                >> "$GITHUB_OUTPUT"
+
+      - name: Update deno.json
+        run: |
+          set -euo pipefail
+          new='${{ steps.bump.outputs.new_version }}'
+          # Replace only the top-level "version": "x.y.z"
+          perl -0777 -i -pe 's/"version"\s*:\s*"\d+\.\d+\.\d+"/"version": "'"$new"'"/' deno.json
+          grep '"version"' deno.json
+
+      - name: Commit, tag, push
+        env:
+          TAG: ${{ steps.bump.outputs.tag }}
+          NEW: ${{ steps.bump.outputs.new_version }}
+        run: |
+          set -euo pipefail
+          git config user.name  'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add deno.json
+          # [skip ci] keeps the pipeline.yml from re-triggering on this push.
+          git commit -m "chore(release): ${TAG} [skip ci]"
+          git tag -a "${TAG}" -m "Release ${TAG}"
+          git push origin HEAD:${GITHUB_REF_NAME}
+          git push origin "${TAG}"
+
+      - name: Summary
+        run: |
+          {
+            echo '### 🔖 Version bumped'
+            echo ''
+            echo '| Field | Value |'
+            echo '| --- | --- |'
+            echo "| Bump    | \`${{ inputs.bump }}\` |"
+            echo "| From    | \`${{ steps.bump.outputs.current_version }}\` |"
+            echo "| To      | \`${{ steps.bump.outputs.new_version }}\` |"
+            echo "| Tag     | \`${{ steps.bump.outputs.tag }}\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------------
+  # 2. Build native binaries for linux / macOS / windows (matrix).
+  # ---------------------------------------------------------------------------
+  build:
+    name: Build (${{ matrix.name }})
+    needs: bump
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: linux-x86_64
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            ext: ''
+          - name: macos-x86_64
+            os: macos-13
+            target: x86_64-apple-darwin
+            ext: ''
+          - name: macos-aarch64
+            os: macos-latest
+            target: aarch64-apple-darwin
+            ext: ''
+          - name: windows-x86_64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            ext: '.exe'
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.bump.outputs.tag }}
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Compile
+        shell: bash
+        env:
+          TARGET: ${{ matrix.target }}
+          NAME: ${{ matrix.name }}
+          EXT: ${{ matrix.ext }}
+        run: |
+          set -euo pipefail
+          out="coach-${NAME}${EXT}"
+          deno compile \
+            --allow-read --allow-write --allow-env --allow-run --allow-ffi \
+            --target "${TARGET}" \
+            --output "${out}" \
+            cli.ts
+          ls -la "${out}"
+
+      - name: Checksum
+        shell: bash
+        env:
+          NAME: ${{ matrix.name }}
+          EXT: ${{ matrix.ext }}
+        run: |
+          set -euo pipefail
+          out="coach-${NAME}${EXT}"
+          if command -v sha256sum >/dev/null; then
+            sha256sum "${out}" | tee "${out}.sha256"
+          else
+            shasum -a 256 "${out}" | tee "${out}.sha256"
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coach-${{ matrix.name }}
+          path: |
+            coach-${{ matrix.name }}${{ matrix.ext }}
+            coach-${{ matrix.name }}${{ matrix.ext }}.sha256
+          if-no-files-found: error
+          retention-days: 30
+
+  # ---------------------------------------------------------------------------
+  # 3. Collect every artifact and publish a GitHub Release.
+  # ---------------------------------------------------------------------------
+  release:
+    name: GitHub Release
+    needs: [bump, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.bump.outputs.tag }}
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -la dist/
+
+      - name: Generate SLSA build provenance for all binaries
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: 'dist/coach-*'
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.bump.outputs.tag }}
+          name: ${{ needs.bump.outputs.tag }}
+          generate_release_notes: true
+          files: |
+            dist/coach-*
+
+      - name: Summary
+        run: |
+          {
+            echo '### 🚀 Release published'
+            echo ''
+            echo '| Field | Value |'
+            echo '| --- | --- |'
+            echo "| Tag     | \`${{ needs.bump.outputs.tag }}\` |"
+            echo "| Version | \`${{ needs.bump.outputs.new_version }}\` |"
+            echo "| Bump    | \`${{ inputs.bump }}\` |"
+            echo ''
+            echo '#### Artifacts'
+            echo ''
+            echo '```'
+            ls -la dist/
+            echo '```'
+            echo ''
+            echo "🔗 https://github.com/${GITHUB_REPOSITORY}/releases/tag/${{ needs.bump.outputs.tag }}"
+          } >> "$GITHUB_STEP_SUMMARY"
