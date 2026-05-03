@@ -2,6 +2,8 @@
  * coach:review — Structured code review skill.
  */
 
+import process from 'node:process';
+import { runtime } from '../utils/runtime/index.ts';
 import { SKILL_ICONS } from '../utils/ascii.ts';
 import { isInteractive } from '../utils/platform.ts';
 import type { SessionContext, Skill, SkillResult } from './base.ts';
@@ -92,9 +94,9 @@ export async function resolveInput(args: string[]): Promise<ResolvedInput> {
   // 1. Check if it's a file path
   if (input && !input.includes('\n')) {
     try {
-      const stat = await Deno.stat(input);
+      const stat = await runtime.stat(input);
       if (stat.isFile) {
-        const code = await Deno.readTextFile(input);
+        const code = await runtime.readTextFile(input);
         const lang = detectLanguageFromExtension(input) || detectLanguageFromContent(code);
         return { code, lang, source: 'file' };
       }
@@ -107,7 +109,9 @@ export async function resolveInput(args: string[]): Promise<ResolvedInput> {
   if (!isInteractive()) {
     const decoder = new TextDecoder();
     const chunks: string[] = [];
-    for await (const chunk of Deno.stdin.readable) {
+    // process.stdin is an async iterable on Deno (via node-compat), Bun, and
+    // Node — the chunks may be Buffer or Uint8Array; decode either way.
+    for await (const chunk of process.stdin as AsyncIterable<Uint8Array>) {
       chunks.push(decoder.decode(chunk));
     }
     const code = chunks.join('');

@@ -4,6 +4,7 @@
 
 import { printBanner, renderStubMessage } from '../utils/ascii.ts';
 import { c } from '../utils/colors.ts';
+import { runtime } from '../utils/runtime/index.ts';
 
 /** Current Dev Coach version (kept in sync with `deno.json`). */
 export const VERSION = '0.1.0';
@@ -180,6 +181,6 @@ export async function route(
     default:
       console.error(`${c.error('Unknown command:')} ${subcommand}`);
       console.error(c.dim("Run 'coach --help' to see available commands."));
-      Deno.exit(1);
+      runtime.exit(1);
   }
 }

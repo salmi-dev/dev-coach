@@ -5,6 +5,12 @@
  * minimal numeric picker that prints a numbered list and reads a line from stdin.
  */
 
+import { runtime } from './runtime/index.ts';
+import { __setReadLineForTesting, readPromptLine } from './prompt.ts';
+
+/** Re-exported test seam so existing test imports keep working. */
+export { __setReadLineForTesting };
+
 /** Result of presenting a picker to the user. */
 export interface PickResult<T> {
   /** Selected item, or `null` if the user aborted (empty input, EOF, Ctrl-C). */
@@ -37,8 +43,8 @@ export async function hasFzf(): Promise<boolean> {
   if (fzfChecked) return fzfAvailable;
   fzfChecked = true;
   try {
-    const { success } = await new Deno.Command('fzf', { args: ['--version'], stdout: 'null', stderr: 'null' }).output();
-    fzfAvailable = success;
+    const result = await runtime.runCommand('fzf', ['--version']);
+    fzfAvailable = result.code === 0;
   } catch {
     fzfAvailable = false;
   }
@@ -62,7 +68,11 @@ export async function hasFzf(): Promise<boolean> {
  * if (item) console.log(`You picked ${item}`);
  * ```
  */
-export async function pick<T>(items: T[], label: (item: T) => string, prompt = 'Select an item'): Promise<PickResult<T>> {
+export async function pick<T>(
+  items: T[],
+  label: (item: T) => string,
+  prompt = 'Select an item',
+): Promise<PickResult<T>> {
   if (items.length === 0) return { item: null, index: -1 };
   if (items.length === 1) return { item: items[0], index: 0 };
 
@@ -73,50 +83,46 @@ export async function pick<T>(items: T[], label: (item: T) => string, prompt = '
 }
 
 /** Pipe labels to `fzf` and resolve the user's selection. */
-async function pickWithFzf<T>(items: T[], label: (item: T) => string): Promise<PickResult<T>> {
+async function pickWithFzf<T>(
+  items: T[],
+  label: (item: T) => string,
+): Promise<PickResult<T>> {
   const labels = items.map(label);
-  const proc = new Deno.Command('fzf', {
-    args: ['--height=40%', '--reverse', '--prompt=› '],
-    stdin: 'piped',
-    stdout: 'piped',
-    stderr: 'inherit',
-  }).spawn();
+  // fzf needs to draw its TUI on the terminal — inherit stderr so the picker
+  // is visible — but pipe stdin (the labels) and stdout (the selection).
+  const result = await runtime.runCommand(
+    'fzf',
+    ['--height=40%', '--reverse', '--prompt=› '],
+    { stdin: labels.join('\n') + '\n', stderrInherit: true },
+  );
+  if (result.code !== 0) return { item: null, index: -1 };
 
-  const writer = proc.stdin.getWriter();
-  await writer.write(new TextEncoder().encode(labels.join('\n') + '\n'));
-  await writer.close();
-
-  const { stdout, success } = await proc.output();
-  if (!success) return { item: null, index: -1 };
-
-  const chosen = new TextDecoder().decode(stdout).trim();
+  const chosen = result.stdout.trim();
   const index = labels.indexOf(chosen);
   if (index < 0) return { item: null, index: -1 };
   return { item: items[index], index };
 }
 
-/** Print a numbered list and read a number from stdin. */
-function pickNumeric<T>(items: T[], label: (item: T) => string, prompt: string): PickResult<T> {
-  const encoder = new TextEncoder();
-  const decoder = new TextDecoder();
-
+/**
+ * Print a numbered list and read a number from stdin via the {@link readLine}
+ * seam (see {@link __setReadLineForTesting}). The default reader uses
+ * `node:readline/promises`, which is supported on Bun + Node natively and on
+ * Deno via node-compat.
+ */
+async function pickNumeric<T>(
+  items: T[],
+  label: (item: T) => string,
+  prompt: string,
+): Promise<PickResult<T>> {
   for (let i = 0; i < items.length; i++) {
-    Deno.stdout.writeSync(encoder.encode(`  ${String(i + 1).padStart(3)}. ${label(items[i])}\n`));
+    console.log(`  ${String(i + 1).padStart(3)}. ${label(items[i])}`);
   }
-  Deno.stdout.writeSync(encoder.encode(`\n${prompt} [1-${items.length}]: `));
 
-  const buf = new Uint8Array(64);
-  let n: number | null = 0;
-  try {
-    n = Deno.stdin.readSync(buf);
-  } catch {
-    return { item: null, index: -1 };
-  }
-  if (!n) return { item: null, index: -1 };
-
-  const raw = decoder.decode(buf.subarray(0, n)).trim();
-  if (!raw) return { item: null, index: -1 };
-  const idx = parseInt(raw, 10) - 1;
+  const raw = await readPromptLine(`\n${prompt} [1-${items.length}]: `);
+  if (raw === null) return { item: null, index: -1 };
+  const trimmed = raw.trim();
+  if (!trimmed) return { item: null, index: -1 };
+  const idx = parseInt(trimmed, 10) - 1;
   if (isNaN(idx) || idx < 0 || idx >= items.length) return { item: null, index: -1 };
   return { item: items[idx], index: idx };
 }

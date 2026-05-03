@@ -17,20 +17,18 @@
  * ```
  */
 
+import { runtime } from './runtime/index.ts';
+
 /** Compute the initial color-enabled state from environment + TTY. */
 function detectColorSupport(): boolean {
   try {
-    const noColor = Deno.env.get('NO_COLOR');
+    const noColor = runtime.env.get('NO_COLOR');
     if (noColor && noColor.length > 0) return false;
-    if (Deno.env.get('TERM') === 'dumb') return false;
+    if (runtime.env.get('TERM') === 'dumb') return false;
   } catch {
-    // No --allow-env permission → fall through to TTY check.
+    // No env access → fall through to TTY check.
   }
-  try {
-    return Deno.stdout.isTerminal();
-  } catch {
-    return false;
-  }
+  return runtime.stdout.isTerminal();
 }
 
 let colorEnabled = detectColorSupport();

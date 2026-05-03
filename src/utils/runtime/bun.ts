@@ -12,7 +12,7 @@
  * @module
  */
 
-import type { CommandResult, Runtime } from './index.ts';
+import type { CommandResult, RunCommandOpts, Runtime } from './index.ts';
 import { buildNodeCompatRuntime } from './_node-compat.ts';
 
 // Bun's globalThis.Bun is not declared in the @types/node we have available
@@ -23,19 +23,19 @@ const BunGlobal: any = (globalThis as any).Bun;
 async function bunRunCommand(
   cmd: string,
   args: string[],
-  opts: { stdin?: string } = {},
+  opts: RunCommandOpts = {},
 ): Promise<CommandResult> {
-  const proc = BunGlobal.spawn([cmd, ...args], {
-    stdin: opts.stdin !== undefined ? new TextEncoder().encode(opts.stdin) : 'ignore',
-    stdout: 'pipe',
-    stderr: 'pipe',
-  });
-  const [stdout, stderr] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
+  const stdin = opts.stdinInherit ? 'inherit' : opts.stdin !== undefined ? new TextEncoder().encode(opts.stdin) : 'ignore';
+  const stdout = opts.stdoutInherit ? 'inherit' : 'pipe';
+  const stderr = opts.stderrInherit ? 'inherit' : 'pipe';
+
+  const proc = BunGlobal.spawn([cmd, ...args], { stdin, stdout, stderr });
+  const [stdoutText, stderrText] = await Promise.all([
+    opts.stdoutInherit ? Promise.resolve('') : new Response(proc.stdout).text(),
+    opts.stderrInherit ? Promise.resolve('') : new Response(proc.stderr).text(),
   ]);
   const code: number = await proc.exited;
-  return { code, stdout, stderr };
+  return { code, stdout: stdoutText, stderr: stderrText };
 }
 
 /** The Bun-backed runtime adapter instance. */

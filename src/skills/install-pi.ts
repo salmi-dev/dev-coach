@@ -5,6 +5,7 @@
 import { join } from '@std/path';
 import { exists } from '@std/fs';
 import { parseArgs } from '@std/cli/parse-args';
+import { runtime } from '../utils/runtime/index.ts';
 import { renderBox } from '../utils/ascii.ts';
 
 const SKILL_DIRS = ['.pi/skills', '.codex/skills', '.github/skills'];
@@ -63,13 +64,13 @@ export async function runInstallPi(args: string[]): Promise<void> {
     const destPath = join(destDir, 'SKILL.md');
 
     try {
-      const content = await Deno.readTextFile(srcPath);
-      await Deno.mkdir(destDir, { recursive: true });
-      await Deno.writeTextFile(destPath, content);
+      const content = await runtime.readTextFile(srcPath);
+      await runtime.mkdir(destDir, { recursive: true });
+      await runtime.writeTextFile(destPath, content);
     } catch (_e) {
       // If source doesn't exist, create a placeholder
-      await Deno.mkdir(destDir, { recursive: true });
-      await Deno.writeTextFile(destPath, `# ${skill}\n\nSkill definition placeholder.\n`);
+      await runtime.mkdir(destDir, { recursive: true });
+      await runtime.writeTextFile(destPath, `# ${skill}\n\nSkill definition placeholder.\n`);
     }
   }
 
@@ -99,7 +100,7 @@ export async function runUninstallPi(args: string[]): Promise<void> {
   for (const skill of SKILLS) {
     const skillDir = join(targetDir, skill);
     try {
-      await Deno.remove(skillDir, { recursive: true });
+      await runtime.remove(skillDir, { recursive: true });
       console.log(`  Removed ${skill}`);
     } catch {
       // Already gone

@@ -3,6 +3,7 @@
  */
 
 import { c } from './colors.ts';
+import { runtime } from './runtime/index.ts';
 
 /** ASCII icons for each skill mode. */
 export const SKILL_ICONS: Record<string, string> = {
@@ -152,12 +153,7 @@ export function printBanner(skillId: string): void {
   // Determine inner width: max(art line length, name length) + 2 padding chars.
   const inner = Math.max(name.length, ...art.map((l) => l.length)) + 2;
   // Clamp to terminal width when available.
-  let cols = 60;
-  try {
-    cols = Deno.consoleSize().columns;
-  } catch {
-    // not a TTY; keep default
-  }
+  const cols = runtime.consoleSize().columns;
   const width = Math.min(inner, Math.max(20, cols - 2));
 
   const horizontal = '─'.repeat(width);

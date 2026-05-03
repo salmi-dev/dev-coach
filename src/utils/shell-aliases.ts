@@ -5,6 +5,7 @@
  */
 
 import { join } from '@std/path';
+import { runtime } from './runtime/index.ts';
 import { getHomeDir, getOS } from './platform.ts';
 
 /** Supported shells in v1. */
@@ -38,7 +39,7 @@ function escapeRe(s: string): string {
  * @returns `{ shell, rcPath }` for supported shells; `null` for unsupported shells (fish, csh, etc.).
  */
 export function detectShellRc(): { shell: SupportedShell; rcPath: string } | null {
-  const shellEnv = Deno.env.get('SHELL') ?? '';
+  const shellEnv = runtime.env.get('SHELL') ?? '';
   const home = getHomeDir();
 
   if (shellEnv.endsWith('/zsh') || shellEnv === 'zsh') {
@@ -87,9 +88,9 @@ export async function installAliases(rcPathOverride?: string, shellOverride?: Su
 
   let existing = '';
   try {
-    existing = await Deno.readTextFile(rcPath);
+    existing = await runtime.readTextFile(rcPath);
   } catch (e) {
-    if (!(e instanceof Deno.errors.NotFound)) throw e;
+    if (!runtime.errors.isNotFound(e)) throw e;
   }
 
   const block = buildAliasBlock();
@@ -108,7 +109,7 @@ export async function installAliases(rcPathOverride?: string, shellOverride?: Su
     return { rcPath, shell, changed: false };
   }
 
-  await Deno.writeTextFile(rcPath, next);
+  await runtime.writeTextFile(rcPath, next);
   return { rcPath, shell, changed: true };
 }
 
@@ -127,9 +128,9 @@ export async function uninstallAliases(rcPathOverride?: string, shellOverride?: 
 
   let existing = '';
   try {
-    existing = await Deno.readTextFile(rcPath);
+    existing = await runtime.readTextFile(rcPath);
   } catch (e) {
-    if (e instanceof Deno.errors.NotFound) {
+    if (runtime.errors.isNotFound(e)) {
       return { rcPath, shell, changed: false };
     }
     throw e;
@@ -142,7 +143,7 @@ export async function uninstallAliases(rcPathOverride?: string, shellOverride?: 
 
   BLOCK_RE.lastIndex = 0;
   const next = existing.replace(BLOCK_RE, '\n');
-  await Deno.writeTextFile(rcPath, next);
+  await runtime.writeTextFile(rcPath, next);
   return { rcPath, shell, changed: true };
 }
 
@@ -153,7 +154,7 @@ function resolveTarget(rcPathOverride?: string, shellOverride?: SupportedShell):
   }
   const detected = detectShellRc();
   if (!detected) {
-    const shellEnv = Deno.env.get('SHELL') ?? '<unset>';
+    const shellEnv = runtime.env.get('SHELL') ?? '<unset>';
     throw new Error(`Unsupported shell: ${shellEnv}. Supported: bash, zsh`);
   }
   return detected;

@@ -3,6 +3,7 @@
  */
 
 import { join } from '@std/path';
+import { runtime } from '../utils/runtime/index.ts';
 import { SKILL_ICONS } from '../utils/ascii.ts';
 import { detectLanguage } from './ask.ts';
 import { detectProjectType, getTemplate } from './project-templates.ts';
@@ -73,23 +74,23 @@ export const projectSkill: Skill = {
 
     // Create directories
     for (const dir of template.dirs) {
-      await Deno.mkdir(join(projectDir, dir), { recursive: true });
+      await runtime.mkdir(join(projectDir, dir), { recursive: true });
     }
-    await Deno.mkdir(projectDir, { recursive: true });
+    await runtime.mkdir(projectDir, { recursive: true });
 
     const generatedFiles: string[] = [];
 
     // Generate README
     const readmeContent = generateReadme(input, slug, lang, projectType, fileTree);
-    await Deno.writeTextFile(join(projectDir, 'README.md'), readmeContent);
+    await runtime.writeTextFile(join(projectDir, 'README.md'), readmeContent);
     generatedFiles.push('README.md');
 
     // Generate template files
     for (const file of template.files) {
       const content = generateFileContent(file.path, slug, lang, projectType);
       const filePath = join(projectDir, file.path);
-      await Deno.mkdir(join(filePath, '..'), { recursive: true });
-      await Deno.writeTextFile(filePath, content);
+      await runtime.mkdir(join(filePath, '..'), { recursive: true });
+      await runtime.writeTextFile(filePath, content);
       generatedFiles.push(file.path);
     }
 

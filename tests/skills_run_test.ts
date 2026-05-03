@@ -16,6 +16,7 @@ import { sandboxSkill } from '../src/skills/sandbox.ts';
 import { detectLanguageFromContent, detectLanguageFromExtension, reviewSkill } from '../src/skills/review.ts';
 import { renderBar, renderLanguageBars, renderMonthlyDashboard, statsSkill } from '../src/skills/stats.ts';
 import { ApproachCollector, formatSummaryTable, parseSelection } from '../src/skills/interactive.ts';
+import { __setReadLineForTesting } from '../src/utils/prompt.ts';
 import { parseLangSelection } from '../src/skills/init.ts';
 import { projectSkill } from '../src/skills/project.ts';
 import type { SessionContext } from '../src/skills/base.ts';
@@ -220,32 +221,17 @@ Deno.test('ApproachCollector.selectAndSave: saves selected approaches with stubb
 
   const ctx = await makeRealContext();
 
-  // Stub stdin to answer "all" → saves both.
-  const origRead = Deno.stdin.readSync.bind(Deno.stdin);
-  const origWrite = Deno.stdout.writeSync.bind(Deno.stdout);
-  const encoder = new TextEncoder();
-  const queue = encoder.encode('all\n');
-  let pos = 0;
-  // deno-lint-ignore no-explicit-any
-  (Deno.stdin as any).readSync = (buf: Uint8Array): number | null => {
-    if (pos >= queue.length) return null;
-    const remaining = queue.length - pos;
-    const n = Math.min(buf.length, remaining);
-    buf.set(queue.subarray(pos, pos + n));
-    pos += n;
-    return n;
-  };
-  // deno-lint-ignore no-explicit-any
-  (Deno.stdout as any).writeSync = (chunk: Uint8Array): number => chunk.length;
+  // Stub the cross-runtime line reader to answer "all" → saves both.
+  // This replaces the previous Deno.stdin.readSync stub now that we route
+  // CLI prompts through src/utils/prompt.ts (cf. boost-jsr-score-and-runtime-compat
+  // Group 6).
+  __setReadLineForTesting(() => Promise.resolve('all'));
 
   try {
     const saved = await c.selectAndSave(ctx.db, { source: 'test', libraryPath: ctx.libraryPath });
     assertEquals(saved.length, 2);
   } finally {
-    // deno-lint-ignore no-explicit-any
-    (Deno.stdin as any).readSync = origRead;
-    // deno-lint-ignore no-explicit-any
-    (Deno.stdout as any).writeSync = origWrite;
+    __setReadLineForTesting(null);
   }
 });
 

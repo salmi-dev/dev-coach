@@ -4,6 +4,7 @@
 
 import { Database } from '@db/sqlite';
 import { copyToClipboard, detectClipboardTool } from '../utils/clipboard.ts';
+import { readPromptLine } from '../utils/prompt.ts';
 import { type ItemType, saveItem, type SaveItemOptions } from './library.ts';
 
 /** Outcome of an interactive {@link savePrompt} call. */
@@ -31,24 +32,26 @@ export async function savePrompt(
   },
 ): Promise<SavePromptResult> {
   // Ask to save
-  const saveAnswer = await prompt(`💾 Save as ${type}? [Y/n] `);
+  const saveAnswer = await readPromptLine(`💾 Save as ${type}? [Y/n] `);
   if (saveAnswer?.toLowerCase() === 'n') {
     return { saved: false };
   }
 
   // Title
-  const titleAnswer = await prompt(`Title [${suggestedTitle}]: `);
+  const titleAnswer = await readPromptLine(`Title [${suggestedTitle}]: `);
   const title = titleAnswer?.trim() || suggestedTitle;
 
   // Tags
   const tagsStr = suggestedTags.join(', ');
-  const tagsAnswer = await prompt(`Tags [${tagsStr}]: `);
+  const tagsAnswer = await readPromptLine(`Tags [${tagsStr}]: `);
   const tags = tagsAnswer?.trim() ? tagsAnswer.split(',').map((t) => t.trim()).filter((t) => t.length > 0) : suggestedTags;
 
   // Difficulty (snippets only)
   let difficulty: 'beginner' | 'intermediate' | 'advanced' | undefined;
   if (type === 'snippet') {
-    const diffAnswer = await prompt('Difficulty [1=beginner, 2=intermediate, 3=advanced]: ');
+    const diffAnswer = await readPromptLine(
+      'Difficulty [1=beginner, 2=intermediate, 3=advanced]: ',
+    );
     const diffMap = { '1': 'beginner', '2': 'intermediate', '3': 'advanced' } as const;
     difficulty = diffMap[diffAnswer?.trim() as keyof typeof diffMap];
   }
@@ -70,7 +73,7 @@ export async function savePrompt(
   let copied = false;
   const clipTool = await detectClipboardTool();
   if (clipTool) {
-    const copyAnswer = await prompt('📋 Copy to clipboard? [Y/n] ');
+    const copyAnswer = await readPromptLine('📋 Copy to clipboard? [Y/n] ');
     if (copyAnswer?.toLowerCase() !== 'n') {
       copied = await copyToClipboard(content);
       if (copied) {
@@ -82,17 +85,4 @@ export async function savePrompt(
   }
 
   return { saved: true, path, copied };
-}
-
-/** Read a line from stdin. */
-function prompt(message: string): Promise<string | null> {
-  const buf = new Uint8Array(1024);
-  Deno.stdout.writeSync(new TextEncoder().encode(message));
-  try {
-    const n = Deno.stdin.readSync(buf);
-    if (n === null) return Promise.resolve(null);
-    return Promise.resolve(new TextDecoder().decode(buf.subarray(0, n)).trim());
-  } catch {
-    return Promise.resolve(null);
-  }
 }
