@@ -2,7 +2,8 @@
  * CLI subcommand routing.
  */
 
-import { renderStubMessage } from '../utils/ascii.ts';
+import { printBanner, renderStubMessage } from '../utils/ascii.ts';
+import { c } from '../utils/colors.ts';
 
 /** Current Dev Coach version (kept in sync with `deno.json`). */
 export const VERSION = '0.1.0';
@@ -43,6 +44,12 @@ export async function route(
   if (STUB_SKILLS.includes(subcommand)) {
     console.log(renderStubMessage(subcommand));
     return;
+  }
+
+  // Skill subcommands print a banner; library/init/aliases do not.
+  const SKILL_SUBCOMMANDS = new Set(['ask', 'explain', 'compare', 'sandbox', 'review', 'project', 'stats']);
+  if (SKILL_SUBCOMMANDS.has(subcommand)) {
+    printBanner(subcommand);
   }
 
   // Real commands
@@ -143,10 +150,10 @@ export async function route(
       const { installAliases, printSourceHint } = await import('../utils/shell-aliases.ts');
       const res = await installAliases();
       if (res.changed) {
-        console.log(`✅ Installed dev-coach aliases in ${res.rcPath} (${res.shell})`);
+        console.log(`${c.success('✅ Installed')} dev-coach aliases in ${c.dim(res.rcPath)} ${c.dim(`(${res.shell})`)}`);
         printSourceHint(res.rcPath);
       } else {
-        console.log(`ℹ️  dev-coach aliases already up to date in ${res.rcPath}`);
+        console.log(`${c.info('ℹ️  Up to date')} — dev-coach aliases already in ${c.dim(res.rcPath)}`);
       }
       break;
     }
@@ -154,9 +161,9 @@ export async function route(
       const { uninstallAliases } = await import('../utils/shell-aliases.ts');
       const res = await uninstallAliases();
       if (res.changed) {
-        console.log(`✅ Removed dev-coach aliases from ${res.rcPath}`);
+        console.log(`${c.success('✅ Removed')} dev-coach aliases from ${c.dim(res.rcPath)}`);
       } else {
-        console.log('No dev-coach aliases found');
+        console.log(c.dim('No dev-coach aliases found'));
       }
       break;
     }
@@ -171,8 +178,8 @@ export async function route(
       break;
     }
     default:
-      console.error(`Unknown command: ${subcommand}`);
-      console.error(`Run 'coach --help' to see available commands.`);
+      console.error(`${c.error('Unknown command:')} ${subcommand}`);
+      console.error(c.dim("Run 'coach --help' to see available commands."));
       Deno.exit(1);
   }
 }

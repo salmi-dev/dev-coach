@@ -6,6 +6,7 @@ import { Database } from '@db/sqlite';
 import { renderBox, SKILL_ICONS } from '../utils/ascii.ts';
 import { calculateStreak, getProfile, monthOverMonthDelta, rebuildProfile } from '../db/profile.ts';
 import { regenerateDashboard } from '../storage/dashboard.ts';
+import { c } from '../utils/colors.ts';
 import type { SessionContext, Skill, SkillResult } from './base.ts';
 
 // ── Bar Chart Rendering ────────────────────────────────────────
@@ -18,7 +19,7 @@ const EMPTY_BLOCK = '░';
 export function renderBar(ratio: number): string {
   const filled = Math.round(ratio * BAR_WIDTH);
   const empty = BAR_WIDTH - filled;
-  return FULL_BLOCK.repeat(filled) + EMPTY_BLOCK.repeat(empty);
+  return c.green(FULL_BLOCK.repeat(filled)) + c.dim(EMPTY_BLOCK.repeat(empty));
 }
 
 /** Render up to 5 language usage bars (top by count) for the dashboard. */
@@ -72,20 +73,20 @@ export function renderMonthlyDashboard(db: Database): string {
 
   const lines = [
     '',
-    `Sessions: ${mom.current} total (${deltaStr} vs last month)`,
+    `${c.bold('Sessions:')} ${mom.current} total (${deltaStr} vs last month)`,
     '',
-    `By mode:`,
-    `  ${modeStr || 'none yet'}`,
+    c.bold('By mode:'),
+    `  ${modeStr || c.dim('none yet')}`,
     '',
-    'Languages:',
-    ...(bars.length > 0 ? bars : ['  No language data yet']),
+    c.bold('Languages:'),
+    ...(bars.length > 0 ? bars : [c.dim('  No language data yet')]),
     '',
-    'Library:',
+    c.bold('Library:'),
     `  📝 ${snippets} snippets  📖 ${tldrs} tldrs`,
     `  🏗️  ${projects} projects`,
     '',
-    `🔥 Streak: ${streak} day${streak !== 1 ? 's' : ''}`,
-    `📈 Most active: ${activeDay}`,
+    `🔥 ${c.bold('Streak:')} ${streak} day${streak !== 1 ? 's' : ''}`,
+    `📈 ${c.bold('Most active:')} ${activeDay}`,
     '',
   ];
 

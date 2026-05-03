@@ -18,16 +18,8 @@
 /** Minimum overall line-coverage percentage required for `deno task verify` to pass. */
 export const THRESHOLD = 80;
 
-/**
- * Strip ANSI escape sequences from a string so the table can be parsed reliably.
- *
- * @param s String potentially containing ANSI codes.
- * @returns The same string with all CSI sequences removed.
- */
-export function stripAnsi(s: string): string {
-  // deno-lint-ignore no-control-regex
-  return s.replace(/\x1B\[[0-9;]*[A-Za-z]/g, '');
-}
+import { stripAnsi } from '../src/utils/colors.ts';
+export { stripAnsi };
 
 /**
  * Parse the overall line-% from a `deno coverage` summary table.

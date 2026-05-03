@@ -20,6 +20,7 @@ import { parseLangSelection } from '../src/skills/init.ts';
 import { projectSkill } from '../src/skills/project.ts';
 import type { SessionContext } from '../src/skills/base.ts';
 import { search } from '../src/storage/search.ts';
+import { setColorEnabled } from '../src/utils/colors.ts';
 
 function makeContext(libraryPath = '/tmp/never'): SessionContext {
   const db = new Database(':memory:');
@@ -279,4 +280,36 @@ Deno.test('projectSkill.run: produces a plan response (non-interactive)', async 
   assert(res.response.length > 0);
   // Plan response should mention the input topic somewhere.
   assertStringIncludes(res.response.toLowerCase(), 'todo');
+});
+
+// ── chat-skill response purity (no ANSI escapes) ────────────────────────────────────
+
+Deno.test('chat-skill responses contain no ANSI escapes even when color is enabled', async () => {
+  setColorEnabled(true);
+  try {
+    const ctx = await makeRealContext();
+    // deno-lint-ignore no-control-regex
+    const ansi = /\x1b\[/;
+    const responses = await Promise.all([
+      askSkill.run('how do I parse json', ctx),
+      explainSkill.run('event loop', ctx),
+      compareSkill.run('a vs b', ctx),
+      sandboxSkill.run('parse json', ctx),
+      reviewSkill.run('fn add(a:i32,b:i32)->i32{a+b}', ctx),
+      projectSkill.run('todo app', ctx),
+    ]);
+    for (const r of responses) {
+      assertEquals(ansi.test(r.response), false, `response should be plain Markdown: ${r.response.slice(0, 80)}`);
+    }
+  } finally {
+    setColorEnabled(false);
+  }
+});
+
+Deno.test('statsSkill response is plain when color is disabled', async () => {
+  setColorEnabled(false);
+  const ctx = await makeRealContext();
+  const res = await statsSkill.run('', ctx);
+  // deno-lint-ignore no-control-regex
+  assertEquals(/\x1b\[/.test(res.response), false);
 });

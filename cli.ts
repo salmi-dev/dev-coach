@@ -7,8 +7,14 @@
 
 import { parseArgs } from '@std/cli/parse-args';
 import { SUBCOMMANDS, VERSION } from './src/cli/router.ts';
+import { setColorEnabled } from './src/utils/colors.ts';
 
-const args = parseArgs(Deno.args, {
+// Pre-scan for --no-color anywhere on the command line, then strip it so
+// it doesn't reach skill handlers as a positional/string argument.
+const rawArgs = Deno.args.filter((a) => a !== '--no-color');
+if (rawArgs.length !== Deno.args.length) setColorEnabled(false);
+
+const args = parseArgs(rawArgs, {
   boolean: ['help', 'version'],
   string: ['config'],
   alias: { h: 'help', v: 'version', c: 'config' },
@@ -38,6 +44,7 @@ ${Object.entries(SUBCOMMANDS).map(([cmd, desc]) => `    ${cmd.padEnd(12)} ${desc
     -h, --help       Show this help message
     -v, --version    Show version
     -c, --config     Override config file path
+        --no-color   Disable ANSI color output (also honors NO_COLOR env)
 `);
   Deno.exit(0);
 }
