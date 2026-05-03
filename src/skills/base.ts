@@ -1,0 +1,155 @@
+/**
+ * Base skill interface and shared runner.
+ */
+
+import { Database } from "@db/sqlite";
+import { CoachConfig } from "../config/schema.ts";
+import { search, type SearchFilters, type SearchResult } from "../storage/search.ts";
+import { logSession } from "../db/logger.ts";
+import { savePrompt } from "../storage/save-prompt.ts";
+import { copyToClipboard, detectClipboardTool } from "../utils/clipboard.ts";
+import { getDb, closeDb } from "../db/connection.ts";
+import { loadConfig } from "../config/config.ts";
+import { getLibraryPath } from "../utils/xdg.ts";
+import type { ItemType } from "../storage/library.ts";
+
+// ── Types ──────────────────────────────────────────────────────
+
+export interface SessionContext {
+  db: Database;
+  config: CoachConfig;
+  libraryPath: string;
+  searchLibrary: (filters: SearchFilters) => SearchResult[];
+}
+
+export interface SkillResult {
+  response: string;
+  lang?: string;
+  tags?: string[];
+  suggestedTitle?: string;
+  suggestedType?: ItemType;
+}
+
+export interface Skill {
+  id: string;
+  icon: string;
+  name: string;
+  run(input: string, context: SessionContext): Promise<SkillResult>;
+}
+
+// ── Context Creation ───────────────────────────────────────────
+
+export async function createContext(configPath?: string): Promise<SessionContext> {
+  const config = await loadConfig(configPath);
+  const db = getDb();
+  const libraryPath = getLibraryPath(config.library_path);
+
+  return {
+    db,
+    config,
+    libraryPath,
+    searchLibrary: (filters: SearchFilters) => search(db, filters),
+  };
+}
+
+export function destroyContext(): void {
+  closeDb();
+}
+
+// ── Command Detection ──────────────────────────────────────────
+
+const CODE_BLOCK_REGEX = /```[\s\S]*?```/g;
+const SHELL_CMD_REGEX = /^\s*\$\s+.+/gm;
+
+export function detectCommands(text: string): string[] {
+  const commands: string[] = [];
+
+  // Extract code blocks
+  const blocks = text.match(CODE_BLOCK_REGEX);
+  if (blocks) {
+    for (const block of blocks) {
+      const inner = block.replace(/^```\w*\n?/, "").replace(/\n?```$/, "").trim();
+      if (inner) commands.push(inner);
+    }
+  }
+
+  // Extract shell commands (lines starting with $)
+  const shellLines = text.match(SHELL_CMD_REGEX);
+  if (shellLines) {
+    for (const line of shellLines) {
+      const cmd = line.replace(/^\s*\$\s+/, "").trim();
+      if (cmd) commands.push(cmd);
+    }
+  }
+
+  return commands;
+}
+
+export function hasCommands(text: string): boolean {
+  return detectCommands(text).length > 0;
+}
+
+// ── Skill Runner ───────────────────────────────────────────────
+
+export async function runSkill(
+  skill: Skill,
+  input: string,
+  context: SessionContext,
+): Promise<void> {
+  const startTime = Date.now();
+
+  // Run the skill
+  const result = await skill.run(input, context);
+
+  // Print response
+  console.log();
+  console.log(result.response);
+  console.log();
+
+  const durationS = Math.round((Date.now() - startTime) / 1000);
+
+  // Detect commands for clipboard
+  const commands = detectCommands(result.response);
+  if (commands.length > 0) {
+    const clipTool = await detectClipboardTool();
+    if (clipTool) {
+      const buf = new Uint8Array(64);
+      Deno.stdout.writeSync(new TextEncoder().encode("📋 Copy command? [Y/n] "));
+      try {
+        const n = Deno.stdin.readSync(buf);
+        const answer = n ? new TextDecoder().decode(buf.subarray(0, n)).trim() : "";
+        if (answer.toLowerCase() !== "n") {
+          const copied = await copyToClipboard(commands[0]);
+          if (copied) console.log("📋 Copied to clipboard!");
+        }
+      } catch {
+        // Non-interactive, skip
+      }
+    }
+  }
+
+  // Save prompt if skill suggests saving
+  if (result.suggestedTitle && result.suggestedType) {
+    await savePrompt(
+      context.db,
+      result.suggestedType,
+      result.suggestedTitle,
+      result.tags ?? [],
+      result.response,
+      {
+        source: `coach:${skill.id}`,
+        lang: result.lang,
+        libraryPath: context.libraryPath,
+      },
+    );
+  }
+
+  // Log session
+  logSession(context.db, {
+    mode: skill.id,
+    lang: result.lang,
+    tags: result.tags,
+    query: input,
+    duration_s: durationS,
+  });
+}
