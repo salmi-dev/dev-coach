@@ -14,6 +14,8 @@
     "test": "deno test --allow-read --allow-write --allow-env --allow-run --allow-ffi --allow-net tests/",
     "coverage:report": "rm -rf cov_profile && deno test --coverage=cov_profile --allow-read --allow-write --allow-env --allow-run --allow-ffi --allow-net tests/",
     "coverage:check": "deno run --allow-read --allow-run scripts/check-coverage.ts cov_profile",
+    "test:bun": "bash scripts/test-bun.sh",
+    "test:node": "bash scripts/test-node.sh",
     "verify": "deno fmt --check && deno lint && deno task coverage:report && deno task coverage:check"
   },
   "imports": {

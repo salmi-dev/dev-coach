@@ -257,35 +257,22 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - name: Run cross-runtime suite on Bun (with coverage)
+      - name: Run cross-runtime suite on Bun (test + coverage gate)
         id: bun-test
         run: |
           set -o pipefail
           LOG="${RUNNER_TEMP:-/tmp}/bun-test.out"
-          bun test --coverage --coverage-reporter=lcov tests/cross-runtime/ 2>&1 | tee "$LOG"
-      - name: Coverage threshold (cross-runtime preset)
-        id: bun-cov
-        run: |
-          set -o pipefail
-          LCOV='coverage/lcov.info'
-          if [ ! -f "$LCOV" ]; then
-            echo "::error::Bun lcov file not found at $LCOV"
-            ls -la coverage/ || true
-            exit 1
-          fi
-          OUT="${RUNNER_TEMP:-/tmp}/bun-cov.out"
-          deno run --allow-read --allow-run scripts/check-coverage.ts \
-            --lcov "$LCOV" --profile cross-runtime --threshold 60 2>&1 | tee "$OUT"
+          bash scripts/test-bun.sh 2>&1 | tee "$LOG"
       - name: Summary
         if: always()
         run: |
           BLOG="${RUNNER_TEMP:-/tmp}/bun-test.out"
-          COUT="${RUNNER_TEMP:-/tmp}/bun-cov.out"
           BCLEAN="${RUNNER_TEMP:-/tmp}/bun-test.clean"
           [ -f "$BLOG" ] && sed 's/\x1b\[[0-9;]*[A-Za-z]//g' "$BLOG" > "$BCLEAN" || true
           test_summary=$(grep -E "^Ran [0-9]+ tests across" "$BCLEAN" 2>/dev/null | tail -1 || echo '')
           tests_pass=$(grep -E "^ *[0-9]+ pass" "$BCLEAN" 2>/dev/null | tail -1 | tr -s ' ' || echo '')
           tests_fail=$(grep -E "^ *[0-9]+ fail" "$BCLEAN" 2>/dev/null | tail -1 | tr -s ' ' || echo '')
+          cov_section=$(grep -E "^(✅|❌) Coverage|^   (scope|files):" "$BCLEAN" 2>/dev/null | tail -3 || echo '')
           {
             echo '### 🥢 Bun cross-runtime tests'
             echo ''
@@ -296,14 +283,14 @@ jobs:
             echo "| Run         | ${test_summary:-—} |"
             echo "| Result      | ${{ job.status }} |"
             echo ''
-            echo '#### Coverage gate'
+            echo '#### Coverage gate (`cross-runtime` preset, ≥ 80%)'
             echo ''
-            if [ -f "$COUT" ]; then
+            if [ -n "$cov_section" ]; then
               echo '```'
-              cat "$COUT"
+              echo "$cov_section"
               echo '```'
             else
-              echo '_Coverage step did not produce output (job likely failed earlier)._'
+              echo '_Coverage line not found in script output (job likely failed before coverage check)._'
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -338,47 +325,27 @@ jobs:
       - name: Install better-sqlite3 (Node 22 fallback path)
         if: matrix.install-better-sqlite3 == 'true'
         run: npm install --no-save --no-package-lock better-sqlite3
-      - name: Run cross-runtime suite on Node (with coverage)
+      - name: Run cross-runtime suite on Node (test + coverage gate)
         id: node-test
-        run: |
-          set -o pipefail
+        env:
           # Node 22 needs --experimental-strip-types to load .ts files;
-          # Node 24 strips types by default. --experimental-test-coverage is
-          # still the flag name on both Node 22 and Node 24.
-          # node --test does not recursively discover from a bare directory
-          # path — pass explicit file paths via shell glob.
-          mkdir -p coverage
-          shopt -s nullglob
-          files=(tests/cross-runtime/*.test.ts)
-          LOG="${RUNNER_TEMP:-/tmp}/node-test.out"
-          node ${{ matrix.ts-flag }} \
-            --experimental-test-coverage \
-            --test-reporter=lcov --test-reporter-destination=coverage/node-lcov.info \
-            --test-reporter=spec --test-reporter-destination=stdout \
-            --test "${files[@]}" 2>&1 | tee "$LOG"
-      - name: Coverage threshold (cross-runtime preset)
-        id: node-cov
+          # the local script auto-detects this, but in CI we pin via env
+          # to keep behaviour explicit per matrix entry.
+          NODE_TEST_FLAGS: ${{ matrix.ts-flag }}
         run: |
           set -o pipefail
-          LCOV='coverage/node-lcov.info'
-          if [ ! -f "$LCOV" ]; then
-            echo "::error::Node lcov file not found at $LCOV"
-            ls -la coverage/ || true
-            exit 1
-          fi
-          OUT="${RUNNER_TEMP:-/tmp}/node-cov.out"
-          deno run --allow-read --allow-run scripts/check-coverage.ts \
-            --lcov "$LCOV" --profile cross-runtime --threshold 60 2>&1 | tee "$OUT"
+          LOG="${RUNNER_TEMP:-/tmp}/node-test.out"
+          bash scripts/test-node.sh 2>&1 | tee "$LOG"
       - name: Summary
         if: always()
         run: |
           NLOG="${RUNNER_TEMP:-/tmp}/node-test.out"
-          COUT="${RUNNER_TEMP:-/tmp}/node-cov.out"
           NCLEAN="${RUNNER_TEMP:-/tmp}/node-test.clean"
           [ -f "$NLOG" ] && sed 's/\x1b\[[0-9;]*[A-Za-z]//g' "$NLOG" > "$NCLEAN" || true
           tests_pass=$(grep -E "# pass " "$NCLEAN" 2>/dev/null | tail -1 | tr -d '#' | tr -s ' ' | sed 's/^ //' || echo '')
           tests_fail=$(grep -E "# fail " "$NCLEAN" 2>/dev/null | tail -1 | tr -d '#' | tr -s ' ' | sed 's/^ //' || echo '')
           tests_dur=$(grep -E "# duration_ms " "$NCLEAN" 2>/dev/null | tail -1 | tr -d '#' | tr -s ' ' | sed 's/^ //' || echo '')
+          cov_section=$(grep -E "^(✅|❌) Coverage|^   (scope|files):" "$NCLEAN" 2>/dev/null | tail -3 || echo '')
           {
             echo "### 🟢 Node ${{ matrix.node-version }} cross-runtime tests"
             echo ''
@@ -391,14 +358,14 @@ jobs:
             echo "| Duration     | ${tests_dur:-?} |"
             echo "| Result       | ${{ job.status }} |"
             echo ''
-            echo '#### Coverage gate'
+            echo '#### Coverage gate (`cross-runtime` preset, ≥ 80%)'
             echo ''
-            if [ -f "$COUT" ]; then
+            if [ -n "$cov_section" ]; then
               echo '```'
-              cat "$COUT"
+              echo "$cov_section"
               echo '```'
             else
-              echo '_Coverage step did not produce output (job likely failed earlier)._'
+              echo '_Coverage line not found in script output (job likely failed before coverage check)._'
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -495,7 +462,7 @@ jobs:
             echo "| Test (Node)  | $(icon "$test_node_r") $test_node_r |"
             echo "| Verify       | $(icon "$verify_r") $verify_r |"
             echo ''
-            echo 'Coverage gates: Deno (≥0.80) is enforced by `Verify`; cross-runtime (≥0.60 on `src/utils/runtime/**`, `src/db/sqlite/**`, `src/utils/prompt.ts`) is enforced inside `Test (Bun)` and `Test (Node)`.'
+            echo 'Coverage gates: Deno (≥0.80 on `src/`) is enforced by `Verify`; cross-runtime (≥0.80 on `src/utils/runtime/**`, `src/db/sqlite/**`, `src/utils/prompt.ts`) is enforced inside `Test (Bun)` and `Test (Node)`.'
           } >> "$GITHUB_STEP_SUMMARY"
 
           # All seven jobs are now blocking. Bun and Node previously had
