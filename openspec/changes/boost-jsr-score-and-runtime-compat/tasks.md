@@ -47,11 +47,11 @@
 
 ## 4. SQLite adapter — interface and Deno implementation
 
-- [ ] 4.1 Create `src/db/sqlite/index.ts` exporting the `Database` interface (`prepare`, `run`, `all`, `get`, `transaction`, `close`) and the `openDb(path)`
+- [x] 4.1 Create `src/db/sqlite/index.ts` exporting the `Database` interface (`prepare`, `run`, `all`, `get`, `transaction`, `close`) and the `openDb(path)`
       factory
-- [ ] 4.2 Create `src/db/sqlite/deno.ts` wrapping `@db/sqlite`'s `Database` to match the interface
-- [ ] 4.3 Add JSDoc on every exported symbol; document the minimum SQLite feature set we rely on
-- [ ] 4.4 Add `tests/db_sqlite_test.ts` covering: open in-memory db, prepare/run/all/get round-trip, transaction commit, transaction rollback on throw, close
+- [x] 4.2 Create `src/db/sqlite/deno.ts` wrapping `@db/sqlite`'s `Database` to match the interface
+- [x] 4.3 Add JSDoc on every exported symbol; document the minimum SQLite feature set we rely on
+- [x] 4.4 Add `tests/db_sqlite_test.ts` covering: open in-memory db, prepare/run/all/get round-trip, transaction commit, transaction rollback on throw, close
 
 ## 5. SQLite adapter — Bun and Node implementations
 
