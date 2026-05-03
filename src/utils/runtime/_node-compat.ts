@@ -15,8 +15,15 @@ import * as os from 'node:os';
 import process from 'node:process';
 import type { CommandResult, DirEntry, FileStat, OSPlatform, RunCommandOpts, Runtime, RuntimeName } from './index.ts';
 
-function osPlatform(): OSPlatform {
-  switch (process.platform) {
+/**
+ * Map a Node-style `process.platform` value to our {@link OSPlatform} enum.
+ * Exported so it can be unit-tested with synthetic platform strings without
+ * having to mock `node:process` itself.
+ *
+ * @param platform Value of `process.platform` (defaults to live process).
+ */
+export function osPlatform(platform: string = process.platform): OSPlatform {
+  switch (platform) {
     case 'darwin':
       return 'darwin';
     case 'linux':

@@ -250,8 +250,21 @@ We target a **100% JSR score** for the package; current breakdown is visible at 
 Steps 3 and 4 are also exposed as standalone tasks so CI can run the test pass once and check the threshold separately (see `.github/workflows/pipeline.yml`)
 without a second `deno test` invocation. Locally, `deno task verify` chains them.
 
-The threshold lives in `scripts/check-coverage.ts` as a single constant (`THRESHOLD = 80`). Update it there and nowhere else. Every OpenSpec change's `tasks.md`
-ends with a `deno task verify` step so regressions can't slip in silently.
+The threshold lives in `scripts/check-coverage.ts` as a single constant (`THRESHOLD = 80`). Update it there and nowhere else. The same 80% bar applies to the
+**cross-runtime** suite on Bun and Node — see below. Every OpenSpec change's `tasks.md` ends with a `deno task verify` step so regressions can't slip in
+silently.
+
+#### Run cross-runtime gates locally
+
+The Bun and Node cross-runtime jobs in CI are reproducible locally via two small driver scripts. Both run the curated suite under `tests/cross-runtime/`,
+collect lcov coverage, and gate on ≥ 80% line coverage of the `cross-runtime` preset (`src/utils/runtime/**`, `src/db/sqlite/**`, `src/utils/prompt.ts`):
+
+```bash
+deno task test:bun     # bash scripts/test-bun.sh   (needs `bun` on PATH)
+deno task test:node    # bash scripts/test-node.sh  (needs Node ≥ 22 on PATH)
+```
+
+CI calls these same scripts — the local and CI execution paths are a single recipe and cannot drift.
 
 ## License
 

@@ -98,3 +98,128 @@ test('runtime.stat / readTextFile / writeTextFile / mkdir / remove round-trip', 
     await runtime.remove(dir, { recursive: true });
   }
 });
+
+test('runtime.readDir yields entries with name + isFile + isDirectory', async () => {
+  const base = runtime.env.get('TMPDIR') ?? runtime.env.get('TEMP') ?? '/tmp';
+  const dir = `${base}/dev-coach-readdir-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  await runtime.mkdir(dir, { recursive: true });
+  try {
+    await runtime.writeTextFile(`${dir}/a.txt`, 'a');
+    await runtime.writeTextFile(`${dir}/b.txt`, 'b');
+    await runtime.mkdir(`${dir}/sub`, { recursive: false });
+
+    const names = new Set<string>();
+    let sawFile = false;
+    let sawDir = false;
+    for await (const entry of runtime.readDir(dir)) {
+      names.add(entry.name);
+      if (entry.isFile) sawFile = true;
+      if (entry.isDirectory) sawDir = true;
+    }
+    if (!names.has('a.txt') || !names.has('b.txt') || !names.has('sub')) {
+      throw new Error(`readDir missing entries: ${[...names].join(',')}`);
+    }
+    if (!sawFile) throw new Error('readDir never reported a file');
+    if (!sawDir) throw new Error('readDir never reported a directory');
+  } finally {
+    await runtime.remove(dir, { recursive: true });
+  }
+});
+
+test('runtime.env.set then env.get round-trips', () => {
+  const key = `__DEV_COACH_ENV_TEST_${Date.now()}__`;
+  runtime.env.set(key, 'hello');
+  const got = runtime.env.get(key);
+  if (got !== 'hello') throw new Error(`env round-trip failed: ${got}`);
+});
+
+test('runtime.errors.isNotFound recognises ENOENT-shaped errors', () => {
+  // Deno's adapter checks `instanceof Deno.errors.NotFound` rather than the
+  // `.code` property, so synthetic-shape recognition only applies on the
+  // Node-compat adapter (Bun + Node).
+  if (runtime.name === 'deno') return;
+  const enoent = { code: 'ENOENT' };
+  if (!runtime.errors.isNotFound(enoent)) {
+    throw new Error('isNotFound did not match a {code: "ENOENT"} object');
+  }
+  if (runtime.errors.isNotFound({ code: 'EACCES' })) {
+    throw new Error('isNotFound matched EACCES (should be false)');
+  }
+  if (runtime.errors.isNotFound({})) {
+    throw new Error('isNotFound matched plain object (should be false)');
+  }
+  if (runtime.errors.isNotFound(null)) {
+    throw new Error('isNotFound matched null (should be false)');
+  }
+  if (runtime.errors.isNotFound('not an error')) {
+    throw new Error('isNotFound matched string (should be false)');
+  }
+});
+
+test('runtime.errors.isNotFound returns true for a real fs miss', async () => {
+  try {
+    await runtime.stat('/this-path/should/not/exist/dev-coach-test');
+    throw new Error('stat() unexpectedly succeeded on a missing path');
+  } catch (e) {
+    if (!runtime.errors.isNotFound(e)) {
+      throw new Error(`isNotFound did not recognise the live fs error: ${String(e)}`);
+    }
+  }
+});
+
+test('runtime.stdout.write accepts a Uint8Array', async () => {
+  // Empty payload — we just want to exercise the write codepath without
+  // polluting the test reporter's output.
+  await runtime.stdout.write(new Uint8Array(0));
+});
+
+test('runtime.stdin.isTerminal returns a boolean', () => {
+  const v = runtime.stdin.isTerminal();
+  if (typeof v !== 'boolean') throw new Error(`isTerminal returned ${typeof v}`);
+});
+
+test('runtime.stdout.isTerminal returns a boolean', () => {
+  const v = runtime.stdout.isTerminal();
+  if (typeof v !== 'boolean') throw new Error(`isTerminal returned ${typeof v}`);
+});
+
+test('runtime.runCommand runs a child process and captures stdout', async () => {
+  // Use `node -e` because every CI runner we target has Node available even
+  // when the test host is Bun. (Bun ships its own runtime but the matrix
+  // includes Node as PATH dependency for the cross-runtime job.)
+  const result = await runtime.runCommand('node', ['-e', "process.stdout.write('hi')"]);
+  if (result.code !== 0) {
+    throw new Error(`runCommand exit ${result.code}: ${result.stderr}`);
+  }
+  if (result.stdout !== 'hi') {
+    throw new Error(`runCommand stdout = ${JSON.stringify(result.stdout)}`);
+  }
+});
+
+test('runtime.runCommand reports non-zero exit code', async () => {
+  const result = await runtime.runCommand('node', ['-e', 'process.exit(7)']);
+  if (result.code !== 7) {
+    throw new Error(`expected exit 7, got ${result.code}`);
+  }
+});
+
+test('runtime.runCommand captures stderr', async () => {
+  const result = await runtime.runCommand('node', ['-e', "process.stderr.write('boom')"]);
+  if (!result.stderr.includes('boom')) {
+    throw new Error(`stderr did not include "boom": ${JSON.stringify(result.stderr)}`);
+  }
+});
+
+test('runtime.runCommand feeds stdin when opts.stdin is provided', async () => {
+  const result = await runtime.runCommand(
+    'node',
+    ['-e', 'process.stdin.on("data", (b) => process.stdout.write(b))'],
+    { stdin: 'piped-input' },
+  );
+  if (result.code !== 0) {
+    throw new Error(`runCommand exit ${result.code}: ${result.stderr}`);
+  }
+  if (!result.stdout.includes('piped-input')) {
+    throw new Error(`stdout did not echo stdin: ${JSON.stringify(result.stdout)}`);
+  }
+});
