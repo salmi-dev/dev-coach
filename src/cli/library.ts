@@ -18,6 +18,19 @@ import { isInteractive } from '../utils/platform.ts';
 import { closeDb, getDb } from '../db/connection.ts';
 import { loadConfig } from '../config/config.ts';
 import { getLibraryPath } from '../utils/xdg.ts';
+import { c, isColorEnabled } from '../utils/colors.ts';
+
+/** Escape regex-special characters so a search query can be safely used in `new RegExp`. */
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** Highlight all case-insensitive occurrences of `query` in `line` with yellow + bold. No-op when color is disabled. */
+function highlightMatches(line: string, query: string): string {
+  if (!isColorEnabled() || query.length === 0) return line;
+  const pattern = new RegExp(escapeRegex(query), 'gi');
+  return line.replace(pattern, (m) => c.yellow(c.bold(m)));
+}
 
 /** Recognised library actions. */
 const ACTIONS = new Set(['list', 'show', 'search', 'edit', 'delete', 'path']);
@@ -115,8 +128,8 @@ async function actionList(type: ItemType, libraryPath: string): Promise<void> {
 
   for (const d of decorated) {
     const slugDisplay = d.match.lang ? `${d.match.lang}/${d.match.slug}` : d.match.slug;
-    const tagStr = d.tags.length > 0 ? ` [${d.tags.join(', ')}]` : '';
-    console.log(`${slugDisplay} — ${d.title}${tagStr}`);
+    const tagStr = d.tags.length > 0 ? ` ${c.cyan(`[${d.tags.join(', ')}]`)}` : '';
+    console.log(`${c.bold(slugDisplay)} ${c.dim('—')} ${d.title}${tagStr}`);
   }
 }
 
@@ -144,8 +157,9 @@ function actionSearch(type: ItemType, args: string[], db: Database): void {
     return;
   }
   for (const r of results) {
-    const tagStr = r.tags.length > 0 ? ` [${r.tags.join(', ')}]` : '';
-    console.log(`${r.path} — ${r.title}${tagStr}`);
+    const tagStr = r.tags.length > 0 ? ` ${c.cyan(`[${r.tags.join(', ')}]`)}` : '';
+    const line = `${c.bold(r.path)} ${c.dim('—')} ${r.title}${tagStr}`;
+    console.log(highlightMatches(line, query));
   }
 }
 
@@ -173,7 +187,7 @@ async function actionEdit(type: ItemType, args: string[], db: Database, libraryP
   const status = await proc.status;
 
   if (!status.success) {
-    console.log('Edit cancelled, no changes indexed');
+    console.log(c.warn('Edit cancelled, no changes indexed'));
     Deno.exit(status.code ?? 1);
   }
 
@@ -183,9 +197,9 @@ async function actionEdit(type: ItemType, args: string[], db: Database, libraryP
     const { metadata } = parseFrontmatter(raw);
     indexItem(db, type, metadata, match.relativePath);
     await regenerateDashboard(db, libraryPath);
-    console.log(`✅ Re-indexed ${match.relativePath}`);
+    console.log(`${c.success('✅ Re-indexed')} ${c.dim(match.relativePath)}`);
   } catch (e) {
-    console.error('Failed to re-index:', e instanceof Error ? e.message : String(e));
+    console.error(`${c.error('Failed to re-index:')} ${e instanceof Error ? e.message : String(e)}`);
   }
 }
 
@@ -217,7 +231,7 @@ async function actionDelete(type: ItemType, args: string[], db: Database, librar
   }
 
   await deleteItem(db, match.relativePath, libraryPath);
-  console.log(`🗑️  Deleted ${match.relativePath}`);
+  console.log(`${c.success('🗑️  Deleted')} ${c.dim(match.relativePath)}`);
 }
 
 /** Print the absolute path of the resolved item. */
@@ -237,7 +251,7 @@ async function actionPath(type: ItemType, args: string[], libraryPath: string): 
 async function resolveOrPick(type: ItemType, slug: string, libraryPath: string): Promise<SlugMatch | null> {
   const matches = await resolveSlug(type, slug, libraryPath);
   if (matches.length === 0) {
-    console.error(`No ${type} matches '${slug}'. Try \`coach ${type} list\` or \`coach ${type} search <query>\`.`);
+    console.error(`${c.error(`No ${type} matches`)} '${slug}'. Try \`coach ${type} list\` or \`coach ${type} search <query>\`.`);
     return null;
   }
   if (matches.length === 1) return matches[0];
