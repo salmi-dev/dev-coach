@@ -266,6 +266,12 @@ deno task test:node    # bash scripts/test-node.sh  (needs Node ≥ 22 on PATH)
 
 CI calls these same scripts — the local and CI execution paths are a single recipe and cannot drift.
 
+### Documentation
+
+User-facing pages are mirrored from [`docs/`](./docs) to the [GitHub wiki](https://github.com/salmi-dev/dev-coach/wiki) by the
+[`Sync Wiki`](.github/workflows/sync-wiki.yml) workflow on every push to `main`. Edit `docs/*.md` on a branch and open a PR — wiki edits made via the UI are
+overwritten on the next sync.
+
 ## License
 
 MIT

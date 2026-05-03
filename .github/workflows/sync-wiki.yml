@@ -1,0 +1,97 @@
+name: Sync Wiki
+
+# Mirror the contents of `docs/` to the GitHub wiki repo
+# (`https://github.com/<owner>/<repo>.wiki.git`) on every push to `main` that
+# touches `docs/**` or this workflow itself.
+#
+# `docs/` is the source of truth. Direct edits in the wiki UI will be
+# overwritten on the next sync. The workflow uses `GITHUB_TOKEN` (which has
+# wiki write permission for the same repo) and a plain `git push` — no
+# third-party action.
+#
+# Bootstrap: the wiki must have at least one page before the `.wiki.git`
+# endpoint accepts pushes. If the very first run fails with "repository not
+# found", create any page once via the wiki UI (e.g. visit
+# https://github.com/<owner>/<repo>/wiki and click "Create the first page",
+# save anything), then re-run this workflow — subsequent runs will overwrite.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**'
+      - '.github/workflows/sync-wiki.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-wiki
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: Mirror docs/ to wiki
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v6
+
+      - name: Mirror docs/ into the wiki repo
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          WIKI_URL="https://x-access-token:${GH_TOKEN}@github.com/${REPO}.wiki.git"
+          WIKI_DIR="$(mktemp -d)"
+
+          # Try to clone the existing wiki. If the wiki has never been
+          # initialized, the clone returns 404 — fall through to a fresh
+          # init so the first push to .wiki.git creates the repo.
+          if git clone --quiet "$WIKI_URL" "$WIKI_DIR" 2>/dev/null; then
+            echo "::notice::Cloned existing wiki repo"
+          else
+            echo "::warning::Wiki repo not initialized; bootstrapping fresh"
+            rm -rf "$WIKI_DIR"
+            git init --quiet --initial-branch=master "$WIKI_DIR"
+            git -C "$WIKI_DIR" remote add origin "$WIKI_URL"
+          fi
+
+          # Mirror docs/ → wiki root, deleting any pages that no longer exist
+          # in docs/. Exclude .git so the wiki's own metadata is preserved.
+          rsync -a --delete --exclude='.git' docs/ "$WIKI_DIR/"
+
+          cd "$WIKI_DIR"
+          git config user.name  'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "::notice::Wiki already up to date — nothing to push"
+            exit 0
+          fi
+
+          git commit --quiet -m "Sync docs from ${REPO}@${SHA:0:7}"
+          # GitHub wikis use `master` as their default branch.
+          if ! git push origin HEAD:master 2>&1; then
+            echo "::error::Push to wiki failed. If this is the first run,"
+            echo "::error::create any page via the wiki UI once, then re-run."
+            exit 1
+          fi
+          echo "::notice::Wiki synced successfully"
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo '### 📚 Wiki sync'
+            echo ''
+            echo '| Field | Value |'
+            echo '| --- | --- |'
+            echo "| Source commit | \`${GITHUB_SHA:0:7}\` |"
+            echo "| Wiki URL | https://github.com/${{ github.repository }}/wiki |"
+            echo "| Result | ${{ job.status }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
