@@ -18,11 +18,6 @@ on:
 permissions:
   contents: write # need to commit version bump + create tag/release
 
-# Silence Node.js 20 deprecation warnings emitted by JS-based actions.
-# See: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   # ---------------------------------------------------------------------------
   # 1. Bump the version in deno.json, commit with [skip ci], tag, push.

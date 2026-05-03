@@ -14,13 +14,6 @@ on:
   pull_request:
     branches: ['main']
 
-# Silence Node.js 20 deprecation warnings emitted by JS-based actions
-# (actions/setup-node@v4, actions/download-artifact@v8, etc.). Forces them
-# to run on Node 24 today instead of waiting for the June 2026 default
-# flip. See: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   fmt:
     name: Fmt
@@ -336,7 +329,7 @@ jobs:
             ts-flag: ''
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
       - uses: denoland/setup-deno@v2
