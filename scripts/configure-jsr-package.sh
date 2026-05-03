@@ -24,9 +24,9 @@ curl -fsS -X PATCH "$PKG" "${AUTH[@]}" "${JSON[@]}" \
   -d '{"description":"AI-powered coding coach: save snippets, TLDRs, and projects with SQLite-backed search."}' \
   | python3 -m json.tool | grep -E '"description"' || true
 
-echo "→ Setting runtimeCompat (Track A: deno-only; Track B will add bun + node)"
+echo "→ Setting runtimeCompat (Track B complete: deno + bun + node)"
 curl -fsS -X PATCH "$PKG" "${AUTH[@]}" "${JSON[@]}" \
-  -d '{"runtimeCompat":{"deno":true,"browser":false,"workerd":false}}' \
+  -d '{"runtimeCompat":{"deno":true,"bun":true,"node":true,"browser":false,"workerd":false}}' \
   | python3 -m json.tool | grep -E '"runtimeCompat"' || true
 
 echo "→ Final state:"

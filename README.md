@@ -17,13 +17,13 @@ Your personal AI-powered coding coach. Ask questions, explore topics, review cod
 ### From JSR (recommended)
 
 ```bash
-deno install -g --allow-read --allow-write --allow-env --allow-run --allow-ffi jsr:@ssal/dev-coach
+deno install -g --allow-read --allow-write --allow-env --allow-run --allow-ffi jsr:@salmidev/dev-coach
 ```
 
 ### From source
 
 ```bash
-git clone https://github.com/ssal/dev-coach
+git clone https://github.com/salmi-dev/dev-coach
 cd dev-coach
 deno task install
 ```
@@ -33,6 +33,30 @@ deno task install
 ```bash
 coach init
 ```
+
+## Supported runtimes
+
+`@salmidev/dev-coach` runs on **Deno**, **Bun**, and **Node.js**. The CLI itself is distributed for Deno; the library API works on all three.
+
+| Runtime                       | Status                         | SQLite driver                                                                                                                                         |
+| ----------------------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Deno ≥ 2.0                    | ✅ first-class (CLI + library) | [`jsr:@db/sqlite`](https://jsr.io/@db/sqlite) (FFI)                                                                                                   |
+| Bun ≥ 1.1                     | ✅ library                     | built-in [`bun:sqlite`](https://bun.com/docs/api/sqlite)                                                                                              |
+| Node.js ≥ 22                  | ✅ library                     | built-in [`node:sqlite`](https://nodejs.org/api/sqlite.html) (Node ≥ 22.5) or [`better-sqlite3`](https://github.com/WiseLibs/better-sqlite3) fallback |
+| Browsers / Cloudflare Workers | ❌                             | n/a (filesystem + native SQLite required)                                                                                                             |
+
+Node 22 itself ships `node:sqlite` only behind `--experimental-sqlite`; the adapter falls back to `better-sqlite3` if you have it installed. Node 24 supports
+`node:sqlite` out of the box.
+
+```ts
+// Same import on every runtime
+import { loadConfig, saveItem, search } from '@salmidev/dev-coach';
+```
+
+Under the hood, `src/utils/runtime/` and `src/db/sqlite/` dispatch to per-runtime adapters at module load — application code never sees `Deno.*`, `Bun.*`, or
+`node:*` directly. See
+[`openspec/changes/boost-jsr-score-and-runtime-compat/specs/runtime-compat/spec.md`](openspec/changes/boost-jsr-score-and-runtime-compat/specs/runtime-compat/spec.md)
+for the contract (will move to `openspec/specs/runtime-compat/spec.md` when the change is archived).
 
 ## Skills
 
