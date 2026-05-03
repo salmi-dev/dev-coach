@@ -112,6 +112,13 @@ jobs:
             os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             ext: ''
+          # Cross-compiled from Linux: the macos-13 (Intel) runner queue is
+          # unreliable, so we let `deno compile --target` produce the Mach-O
+          # binary on a fast ubuntu-latest runner.
+          - name: macos-x86_64
+            os: ubuntu-latest
+            target: x86_64-apple-darwin
+            ext: ''
           - name: macos-aarch64
             os: macos-latest
             target: aarch64-apple-darwin
