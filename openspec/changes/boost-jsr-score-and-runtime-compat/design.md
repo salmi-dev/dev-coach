@@ -28,6 +28,9 @@ All of these eventually touch the filesystem, the SQLite DB, or `Deno.*` env / a
 
 ## Goals / Non-Goals
 
+**Score outcome (verified after Track A):** Track A alone reached **100%** on the JSR score (17/17). The `multipleRuntimesCompatible` flag is shown on the
+package page but is NOT scored. So **Track B is no longer needed for the score**; it stands on its own merits as real multi-runtime support.
+
 **Goals:**
 
 - Hit **100% JSR score** for `@salmidev/dev-coach`.
@@ -156,7 +159,8 @@ correctness.
   **server-side on JSR** via the JSR API or web UI. They are NOT in `deno.json`: we tried `publish.readmeSource` / `publish.runtimeCompat` and `deno publish`
   failed with `unknown field 'readmeSource', expected 'include' or 'exclude'`. There is no top-level Deno schema slot for these at this time.
 
-**Reproducible configuration** (run by a maintainer once after publish, or after any drift; token from https://jsr.io/account/tokens):
+**Reproducible configuration**: see [`scripts/configure-jsr-package.sh`](../../../scripts/configure-jsr-package.sh) — versioned, idempotent, takes `JSR_TOKEN`
+from env. Runs the two `PATCH` calls below.
 
 ```bash
 curl -X PATCH https://api.jsr.io/scopes/salmidev/packages/dev-coach \
