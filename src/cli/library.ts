@@ -8,6 +8,8 @@
 
 import { parseArgs } from '@std/cli/parse-args';
 import { Database } from '@db/sqlite';
+import { runtime } from '../utils/runtime/index.ts';
+import { readPromptLine } from '../utils/prompt.ts';
 import { deleteItem, type ItemType, listSlugs, resolveSlug, type SlugMatch } from '../storage/library.ts';
 import { search } from '../storage/search.ts';
 import { indexItem } from '../storage/sync.ts';
@@ -112,9 +114,9 @@ async function actionList(type: ItemType, libraryPath: string): Promise<void> {
     let title = m.slug;
     let tags: string[] = [];
     try {
-      const stat = await Deno.stat(m.absolutePath);
+      const stat = await runtime.stat(m.absolutePath);
       mtime = stat.mtime?.getTime() ?? 0;
-      const raw = await Deno.readTextFile(m.absolutePath);
+      const raw = await runtime.readTextFile(m.absolutePath);
       const { metadata } = parseFrontmatter(raw);
       if (typeof metadata.title === 'string') title = metadata.title;
       if (Array.isArray(metadata.tags)) tags = metadata.tags as string[];
@@ -137,10 +139,10 @@ async function actionList(type: ItemType, libraryPath: string): Promise<void> {
 async function actionShow(type: ItemType, args: string[], libraryPath: string): Promise<void> {
   if (args.length === 0) {
     console.error(`Usage: coach ${type} show <slug>`);
-    Deno.exit(1);
+    runtime.exit(1);
   }
   const match = await resolveOrPick(type, args[0], libraryPath);
-  if (!match) Deno.exit(1);
+  if (!match) runtime.exit(1);
   await showFile(match.absolutePath);
 }
 
@@ -149,7 +151,7 @@ function actionSearch(type: ItemType, args: string[], db: Database): void {
   const query = args.join(' ').trim();
   if (!query) {
     console.error(`Usage: coach ${type} search <query>`);
-    Deno.exit(1);
+    runtime.exit(1);
   }
   const results = search(db, { type, query });
   if (results.length === 0) {
@@ -167,33 +169,31 @@ function actionSearch(type: ItemType, args: string[], db: Database): void {
 async function actionEdit(type: ItemType, args: string[], db: Database, libraryPath: string): Promise<void> {
   if (args.length === 0) {
     console.error(`Usage: coach ${type} edit <slug>`);
-    Deno.exit(1);
+    runtime.exit(1);
   }
   const match = await resolveOrPick(type, args[0], libraryPath);
-  if (!match) Deno.exit(1);
+  if (!match) runtime.exit(1);
 
-  const editor = Deno.env.get('VISUAL') || Deno.env.get('EDITOR') || 'vi';
+  const editor = runtime.env.get('VISUAL') || runtime.env.get('EDITOR') || 'vi';
   if (!editor) {
     console.error('No editor configured. Set $VISUAL or $EDITOR.');
-    Deno.exit(1);
+    runtime.exit(1);
   }
 
-  const proc = new Deno.Command(editor, {
-    args: [match.absolutePath],
-    stdin: 'inherit',
-    stdout: 'inherit',
-    stderr: 'inherit',
-  }).spawn();
-  const status = await proc.status;
+  const result = await runtime.runCommand(editor, [match.absolutePath], {
+    stdinInherit: true,
+    stdoutInherit: true,
+    stderrInherit: true,
+  });
 
-  if (!status.success) {
+  if (result.code !== 0) {
     console.log(c.warn('Edit cancelled, no changes indexed'));
-    Deno.exit(status.code ?? 1);
+    runtime.exit(result.code);
   }
 
   // Re-index the file from disk.
   try {
-    const raw = await Deno.readTextFile(match.absolutePath);
+    const raw = await runtime.readTextFile(match.absolutePath);
     const { metadata } = parseFrontmatter(raw);
     indexItem(db, type, metadata, match.relativePath);
     await regenerateDashboard(db, libraryPath);
@@ -209,21 +209,20 @@ async function actionDelete(type: ItemType, args: string[], db: Database, librar
   const slug = parsed._[0]?.toString();
   if (!slug) {
     console.error(`Usage: coach ${type} delete <slug> [--yes]`);
-    Deno.exit(1);
+    runtime.exit(1);
   }
 
   const match = await resolveOrPick(type, slug, libraryPath);
-  if (!match) Deno.exit(1);
+  if (!match) runtime.exit(1);
 
   if (!parsed.yes) {
     if (!isInteractive()) {
       console.error('Refusing to delete without --yes in non-interactive mode');
-      Deno.exit(1);
+      runtime.exit(1);
     }
-    Deno.stdout.writeSync(new TextEncoder().encode(`Delete '${match.slug}'? [y/N] `));
-    const buf = new Uint8Array(8);
-    const n = Deno.stdin.readSync(buf) ?? 0;
-    const answer = new TextDecoder().decode(buf.subarray(0, n)).trim().toLowerCase();
+    const answer = ((await readPromptLine(`Delete '${match.slug}'? [y/N] `)) ?? '')
+      .trim()
+      .toLowerCase();
     if (answer !== 'y') {
       console.log('Cancelled.');
       return;
@@ -238,10 +237,10 @@ async function actionDelete(type: ItemType, args: string[], db: Database, librar
 async function actionPath(type: ItemType, args: string[], libraryPath: string): Promise<void> {
   if (args.length === 0) {
     console.error(`Usage: coach ${type} path <slug>`);
-    Deno.exit(1);
+    runtime.exit(1);
   }
   const match = await resolveOrPick(type, args[0], libraryPath);
-  if (!match) Deno.exit(1);
+  if (!match) runtime.exit(1);
   console.log(match.absolutePath);
 }
 
@@ -267,38 +266,28 @@ function formatSlugLabel(m: SlugMatch): string {
 
 /** Print `absPath` to stdout, paging through `$PAGER` only when stdout is a TTY. */
 async function showFile(absPath: string): Promise<void> {
-  const raw = await Deno.readTextFile(absPath);
+  const raw = await runtime.readTextFile(absPath);
 
-  const stdoutTty = (() => {
-    try {
-      return Deno.stdout.isTerminal();
-    } catch {
-      return false;
-    }
-  })();
+  const stdoutTty = runtime.stdout.isTerminal();
 
   if (!stdoutTty) {
-    Deno.stdout.writeSync(new TextEncoder().encode(raw));
-    if (!raw.endsWith('\n')) Deno.stdout.writeSync(new TextEncoder().encode('\n'));
+    await runtime.stdout.write(new TextEncoder().encode(raw));
+    if (!raw.endsWith('\n')) await runtime.stdout.write(new TextEncoder().encode('\n'));
     return;
   }
 
-  const pagerEnv = Deno.env.get('PAGER');
+  const pagerEnv = runtime.env.get('PAGER');
   const [pagerCmd, ...pagerArgs] = pagerEnv && pagerEnv.trim().length > 0 ? pagerEnv.split(/\s+/) : ['less', '-R'];
 
   try {
-    const proc = new Deno.Command(pagerCmd, {
-      args: pagerArgs,
-      stdin: 'piped',
-      stdout: 'inherit',
-      stderr: 'inherit',
-    }).spawn();
-    const writer = proc.stdin.getWriter();
-    await writer.write(new TextEncoder().encode(raw));
-    await writer.close();
-    await proc.status;
+    // Pipe the file content to the pager and let it own stdout/stderr.
+    await runtime.runCommand(pagerCmd, pagerArgs, {
+      stdin: raw,
+      stdoutInherit: true,
+      stderrInherit: true,
+    });
   } catch {
     // Pager not found → fall back to direct write.
-    Deno.stdout.writeSync(new TextEncoder().encode(raw));
+    await runtime.stdout.write(new TextEncoder().encode(raw));
   }
 }

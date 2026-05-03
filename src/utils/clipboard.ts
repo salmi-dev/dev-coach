@@ -3,6 +3,7 @@
  */
 
 import { getOS } from './platform.ts';
+import { runtime } from './runtime/index.ts';
 
 type ClipboardTool = 'pbcopy' | 'wl-copy' | 'xclip' | 'xsel' | 'clip';
 
@@ -14,7 +15,9 @@ export async function detectClipboardTool(): Promise<ClipboardTool | null> {
     if (await commandExists('pbcopy')) return 'pbcopy';
   } else if (os === 'linux') {
     // Wayland first, then X11
-    if (Deno.env.get('WAYLAND_DISPLAY') && await commandExists('wl-copy')) return 'wl-copy';
+    if (runtime.env.get('WAYLAND_DISPLAY') && (await commandExists('wl-copy'))) {
+      return 'wl-copy';
+    }
     if (await commandExists('xclip')) return 'xclip';
     if (await commandExists('xsel')) return 'xsel';
   } else if (os === 'windows') {
@@ -49,19 +52,8 @@ export async function copyToClipboard(text: string): Promise<boolean> {
         break;
     }
 
-    const process = new Deno.Command(cmd[0], {
-      args: cmd.slice(1),
-      stdin: 'piped',
-      stdout: 'null',
-      stderr: 'null',
-    }).spawn();
-
-    const writer = process.stdin.getWriter();
-    await writer.write(new TextEncoder().encode(text));
-    await writer.close();
-
-    const { success } = await process.output();
-    return success;
+    const result = await runtime.runCommand(cmd[0], cmd.slice(1), { stdin: text });
+    return result.code === 0;
   } catch {
     return false;
   }
@@ -71,12 +63,8 @@ export async function copyToClipboard(text: string): Promise<boolean> {
 async function commandExists(cmd: string): Promise<boolean> {
   try {
     const which = getOS() === 'windows' ? 'where' : 'which';
-    const { success } = await new Deno.Command(which, {
-      args: [cmd],
-      stdout: 'null',
-      stderr: 'null',
-    }).output();
-    return success;
+    const result = await runtime.runCommand(which, [cmd]);
+    return result.code === 0;
   } catch {
     return false;
   }

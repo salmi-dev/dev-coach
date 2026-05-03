@@ -38,10 +38,22 @@ export interface DirEntry {
 export interface CommandResult {
   /** Process exit code; `0` on success. */
   code: number;
-  /** Captured stdout (UTF-8 decoded). */
+  /** Captured stdout (UTF-8 decoded). Empty string when `stdoutInherit` is true. */
   stdout: string;
-  /** Captured stderr (UTF-8 decoded). */
+  /** Captured stderr (UTF-8 decoded). Empty string when `stderrInherit` is true. */
   stderr: string;
+}
+
+/** Options accepted by {@link Runtime.runCommand}. */
+export interface RunCommandOpts {
+  /** Text to feed to the child's stdin (closed after). Mutually exclusive with `stdinInherit`. */
+  stdin?: string;
+  /** Inherit the parent's stdin (interactive). Mutually exclusive with `stdin`. */
+  stdinInherit?: boolean;
+  /** Inherit the parent's stdout instead of capturing. */
+  stdoutInherit?: boolean;
+  /** Inherit the parent's stderr instead of capturing. */
+  stderrInherit?: boolean;
 }
 
 /** File metadata subset returned by {@link Runtime.stat}. */
@@ -49,6 +61,8 @@ export interface FileStat {
   isFile: boolean;
   isDirectory: boolean;
   size: number;
+  /** Last-modification time, or `null` when not available from the host. */
+  mtime: Date | null;
 }
 
 /**
@@ -102,14 +116,25 @@ export interface Runtime {
   /** Remove a file or directory. With `recursive: true`, removes contents too. */
   remove(path: string, opts?: { recursive?: boolean }): Promise<void>;
   /**
-   * Run a child process to completion, capturing stdout/stderr as text.
+   * Run a child process to completion, capturing stdout/stderr as text by
+   * default. Use the `*Inherit` flags to inherit one or more parent streams
+   * (for editors, pagers, fzf-style TUIs).
    * `opts.stdin`, if given, is fed to the child's stdin and stdin is closed.
    */
   runCommand(
     cmd: string,
     args: string[],
-    opts?: { stdin?: string },
+    opts?: RunCommandOpts,
   ): Promise<CommandResult>;
+  /**
+   * Predicates for cross-runtime error checks. Use these instead of
+   * `e instanceof Deno.errors.X`, since on Bun and Node filesystem errors
+   * surface as plain `Error` objects with a `code` property.
+   */
+  readonly errors: {
+    /** True iff `e` is a "file/dir not found" error from any host. */
+    isNotFound(e: unknown): boolean;
+  };
 }
 
 /**

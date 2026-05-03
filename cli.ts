@@ -31,11 +31,12 @@
 import { parseArgs } from '@std/cli/parse-args';
 import { SUBCOMMANDS, VERSION } from './src/cli/router.ts';
 import { setColorEnabled } from './src/utils/colors.ts';
+import { runtime } from './src/utils/runtime/index.ts';
 
 // Pre-scan for --no-color anywhere on the command line, then strip it so
 // it doesn't reach skill handlers as a positional/string argument.
-const rawArgs = Deno.args.filter((a) => a !== '--no-color');
-if (rawArgs.length !== Deno.args.length) setColorEnabled(false);
+const rawArgs = runtime.args.filter((a) => a !== '--no-color');
+if (rawArgs.length !== runtime.args.length) setColorEnabled(false);
 
 const args = parseArgs(rawArgs, {
   boolean: ['help', 'version'],
@@ -46,7 +47,7 @@ const args = parseArgs(rawArgs, {
 
 if (args.version) {
   console.log(`dev-coach v${VERSION}`);
-  Deno.exit(0);
+  runtime.exit(0);
 }
 
 const subcommand = args._[0]?.toString();
@@ -69,7 +70,7 @@ ${Object.entries(SUBCOMMANDS).map(([cmd, desc]) => `    ${cmd.padEnd(12)} ${desc
     -c, --config     Override config file path
         --no-color   Disable ANSI color output (also honors NO_COLOR env)
 `);
-  Deno.exit(0);
+  runtime.exit(0);
 }
 
 const { route } = await import('./src/cli/router.ts');

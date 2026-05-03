@@ -13,7 +13,7 @@
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import process from 'node:process';
-import type { CommandResult, DirEntry, FileStat, OSPlatform, Runtime, RuntimeName } from './index.ts';
+import type { CommandResult, DirEntry, FileStat, OSPlatform, RunCommandOpts, Runtime, RuntimeName } from './index.ts';
 
 function osPlatform(): OSPlatform {
   switch (process.platform) {
@@ -62,6 +62,7 @@ async function stat(path: string): Promise<FileStat> {
     isFile: info.isFile(),
     isDirectory: info.isDirectory(),
     size: info.size,
+    mtime: info.mtime ?? null,
   };
 }
 
@@ -96,6 +97,18 @@ async function stdoutWrite(data: Uint8Array): Promise<void> {
   });
 }
 
+function isNotFound(e: unknown): boolean {
+  // On Bun and Node, filesystem errors surface as Error objects with a `code`
+  // property like 'ENOENT'. We match that here for parity with the Deno
+  // adapter's `e instanceof Deno.errors.NotFound`.
+  return (
+    typeof e === 'object' &&
+    e !== null &&
+    'code' in e &&
+    (e as { code: unknown }).code === 'ENOENT'
+  );
+}
+
 /**
  * Build a {@link Runtime} backed by the Node-compatible APIs available on
  * both Bun and Node. The caller provides the `name` and the host-specific
@@ -106,7 +119,7 @@ export function buildNodeCompatRuntime(
   runCommand: (
     cmd: string,
     args: string[],
-    opts?: { stdin?: string },
+    opts?: RunCommandOpts,
   ) => Promise<CommandResult>,
 ): Runtime {
   return Object.freeze({
@@ -137,5 +150,8 @@ export function buildNodeCompatRuntime(
     readDir,
     remove,
     runCommand,
+    errors: {
+      isNotFound,
+    },
   });
 }

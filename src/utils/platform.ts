@@ -1,13 +1,20 @@
 /**
  * Platform detection utilities.
+ *
+ * Thin wrappers over the {@link runtime} adapter that translate the adapter's
+ * canonical names into the dev-coach-specific {@link OS} tag. Prefer using
+ * `runtime.*` directly in new code; this module exists so legacy callers keep
+ * working while we phase out the `Deno.*` references.
  */
+
+import { runtime } from './runtime/index.ts';
 
 /** Operating-system tags used internally. */
 export type OS = 'macos' | 'linux' | 'windows';
 
 /** Detect the current operating system. */
 export function getOS(): OS {
-  switch (Deno.build.os) {
+  switch (runtime.osPlatform()) {
     case 'darwin':
       return 'macos';
     case 'linux':
@@ -21,21 +28,10 @@ export function getOS(): OS {
 
 /** Get the user's home directory. */
 export function getHomeDir(): string {
-  const os = getOS();
-  if (os === 'windows') {
-    const userProfile = Deno.env.get('USERPROFILE');
-    if (userProfile) return userProfile;
-  }
-  const home = Deno.env.get('HOME');
-  if (home) return home;
-  throw new Error('Unable to determine home directory: neither HOME nor USERPROFILE is set');
+  return runtime.homedir();
 }
 
 /** Check whether stdin is an interactive TTY. */
 export function isInteractive(): boolean {
-  try {
-    return Deno.stdin.isTerminal();
-  } catch {
-    return false;
-  }
+  return runtime.stdin.isTerminal();
 }

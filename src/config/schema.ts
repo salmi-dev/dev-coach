@@ -2,6 +2,8 @@
  * Config schema and defaults for Dev Coach.
  */
 
+import { runtime } from '../utils/runtime/index.ts';
+
 /** Allowed response style values for skill output. */
 export type ResponseStyle = 'concise' | 'detailed' | 'examples-first';
 
@@ -28,7 +30,7 @@ export const DEFAULT_CONFIG: CoachConfig = {
   primary_languages: [],
   frameworks: [],
   response_style: 'concise',
-  os: Deno.build.os,
+  os: runtime.osPlatform(),
 };
 
 /** Validate a partial config object. Returns error message or null. */

@@ -4,6 +4,7 @@
 
 import { Database } from '@db/sqlite';
 import { saveItem, type SaveItemOptions } from '../storage/library.ts';
+import { readPromptLine } from '../utils/prompt.ts';
 
 // ── Types ──────────────────────────────────────────────────────
 
@@ -99,18 +100,7 @@ export class ApproachCollector {
     console.log();
 
     // Prompt for selection
-    const buf = new Uint8Array(256);
-    Deno.stdout.writeSync(
-      new TextEncoder().encode(`Which to save? [all / 1,3,4 / none] `),
-    );
-
-    let selectionInput = 'none';
-    try {
-      const n = Deno.stdin.readSync(buf);
-      if (n) selectionInput = new TextDecoder().decode(buf.subarray(0, n)).trim();
-    } catch {
-      // Non-interactive
-    }
+    const selectionInput = (await readPromptLine('Which to save? [all / 1,3,4 / none] ')) ?? 'none';
 
     const indices = parseSelection(selectionInput, this._approaches.length);
     if (indices.length === 0) {

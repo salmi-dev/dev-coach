@@ -4,6 +4,7 @@
 
 import { dirname, join } from '@std/path';
 import { Database } from '@db/sqlite';
+import { runtime } from '../utils/runtime/index.ts';
 import { type BaseFrontmatter, parseFrontmatter, serializeFrontmatter } from './frontmatter.ts';
 import { indexItem, removeIndex } from './sync.ts';
 import { regenerateDashboard } from './dashboard.ts';
@@ -54,11 +55,11 @@ export async function uniqueSlug(baseSlug: string, dir: string, ext = '.md'): Pr
 
   while (true) {
     try {
-      await Deno.stat(join(dir, `${slug}${ext}`));
+      await runtime.stat(join(dir, `${slug}${ext}`));
       counter++;
       slug = `${baseSlug}-${counter}`;
     } catch (e) {
-      if (e instanceof Deno.errors.NotFound) return slug;
+      if (runtime.errors.isNotFound(e)) return slug;
       throw e;
     }
   }
@@ -95,11 +96,11 @@ export async function getItemPath(
       let counter = 1;
       while (true) {
         try {
-          await Deno.stat(join(dir, projSlug));
+          await runtime.stat(join(dir, projSlug));
           counter++;
           projSlug = `${slug}-${counter}`;
         } catch (e) {
-          if (e instanceof Deno.errors.NotFound) break;
+          if (runtime.errors.isNotFound(e)) break;
           throw e;
         }
       }
@@ -135,11 +136,11 @@ export async function saveItem(
   if (options.difficulty) metadata.difficulty = options.difficulty;
 
   // Ensure parent directory exists
-  await Deno.mkdir(dirname(fullPath), { recursive: true });
+  await runtime.mkdir(dirname(fullPath), { recursive: true });
 
   // Write file
   const fileContent = serializeFrontmatter(metadata, content);
-  await Deno.writeTextFile(fullPath, fileContent);
+  await runtime.writeTextFile(fullPath, fileContent);
 
   // Update DB index
   indexItem(db, type, metadata as BaseFrontmatter & Record<string, unknown>, relativePath, options.sessionId);
@@ -156,7 +157,7 @@ export async function saveItem(
 export async function readItem(relativePath: string, libraryPath?: string): Promise<LibraryItem> {
   const libPath = libraryPath ?? getLibraryPath((await loadConfig()).library_path);
   const fullPath = join(libPath, relativePath);
-  const raw = await Deno.readTextFile(fullPath);
+  const raw = await runtime.readTextFile(fullPath);
   const { metadata, body } = parseFrontmatter(raw);
   return { metadata, content: body, relativePath };
 }
@@ -172,7 +173,7 @@ export async function deleteItem(
   const libPath = libraryPath ?? getLibraryPath((await loadConfig()).library_path);
   const fullPath = join(libPath, relativePath);
 
-  await Deno.remove(fullPath);
+  await runtime.remove(fullPath);
   removeIndex(db, relativePath);
   await regenerateDashboard(db, libPath);
 }
@@ -248,10 +249,10 @@ export async function listSlugs(type: ItemType, libraryPath: string): Promise<Sl
   if (type === 'snippet') {
     const root = join(libraryPath, 'snippets');
     try {
-      for await (const entry of Deno.readDir(root)) {
+      for await (const entry of runtime.readDir(root)) {
         if (!entry.isDirectory) continue;
         const langDir = join(root, entry.name);
-        for await (const file of Deno.readDir(langDir)) {
+        for await (const file of runtime.readDir(langDir)) {
           if (!file.isFile || !file.name.endsWith('.md')) continue;
           const slug = file.name.replace(/\.md$/, '');
           matches.push({
@@ -263,12 +264,12 @@ export async function listSlugs(type: ItemType, libraryPath: string): Promise<Sl
         }
       }
     } catch (e) {
-      if (!(e instanceof Deno.errors.NotFound)) throw e;
+      if (!runtime.errors.isNotFound(e)) throw e;
     }
   } else if (type === 'tldr') {
     const dir = join(libraryPath, 'tldr');
     try {
-      for await (const file of Deno.readDir(dir)) {
+      for await (const file of runtime.readDir(dir)) {
         if (!file.isFile || !file.name.endsWith('.md')) continue;
         const slug = file.name.replace(/\.md$/, '');
         matches.push({
@@ -279,12 +280,12 @@ export async function listSlugs(type: ItemType, libraryPath: string): Promise<Sl
         });
       }
     } catch (e) {
-      if (!(e instanceof Deno.errors.NotFound)) throw e;
+      if (!runtime.errors.isNotFound(e)) throw e;
     }
   } else if (type === 'project') {
     const dir = join(libraryPath, 'projects');
     try {
-      for await (const entry of Deno.readDir(dir)) {
+      for await (const entry of runtime.readDir(dir)) {
         if (!entry.isDirectory) continue;
         matches.push({
           slug: entry.name,
@@ -294,7 +295,7 @@ export async function listSlugs(type: ItemType, libraryPath: string): Promise<Sl
         });
       }
     } catch (e) {
-      if (!(e instanceof Deno.errors.NotFound)) throw e;
+      if (!runtime.errors.isNotFound(e)) throw e;
     }
   }
 

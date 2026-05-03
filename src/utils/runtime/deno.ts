@@ -8,7 +8,7 @@
  * @module
  */
 
-import type { CommandResult, DirEntry, FileStat, OSPlatform, Runtime } from './index.ts';
+import type { CommandResult, DirEntry, FileStat, OSPlatform, RunCommandOpts, Runtime } from './index.ts';
 
 function osPlatform(): OSPlatform {
   switch (Deno.build.os) {
@@ -53,6 +53,7 @@ async function stat(path: string): Promise<FileStat> {
     isFile: info.isFile,
     isDirectory: info.isDirectory,
     size: info.size,
+    mtime: info.mtime,
   };
 }
 
@@ -69,16 +70,20 @@ async function* readDir(path: string): AsyncIterable<DirEntry> {
 async function runCommand(
   cmd: string,
   args: string[],
-  opts: { stdin?: string } = {},
+  opts: RunCommandOpts = {},
 ): Promise<CommandResult> {
+  const stdinMode = opts.stdinInherit ? 'inherit' : opts.stdin !== undefined ? 'piped' : 'null';
+  const stdoutMode = opts.stdoutInherit ? 'inherit' : 'piped';
+  const stderrMode = opts.stderrInherit ? 'inherit' : 'piped';
+
   const command = new Deno.Command(cmd, {
     args,
-    stdin: opts.stdin !== undefined ? 'piped' : 'null',
-    stdout: 'piped',
-    stderr: 'piped',
+    stdin: stdinMode,
+    stdout: stdoutMode,
+    stderr: stderrMode,
   });
   const child = command.spawn();
-  if (opts.stdin !== undefined) {
+  if (opts.stdin !== undefined && !opts.stdinInherit) {
     const writer = child.stdin.getWriter();
     await writer.write(new TextEncoder().encode(opts.stdin));
     await writer.close();
@@ -86,8 +91,8 @@ async function runCommand(
   const out = await child.output();
   return {
     code: out.code,
-    stdout: new TextDecoder().decode(out.stdout),
-    stderr: new TextDecoder().decode(out.stderr),
+    stdout: opts.stdoutInherit ? '' : new TextDecoder().decode(out.stdout),
+    stderr: opts.stderrInherit ? '' : new TextDecoder().decode(out.stderr),
   };
 }
 
@@ -132,4 +137,7 @@ export const runtime: Runtime = Object.freeze({
   readDir,
   remove: (path: string, opts?: { recursive?: boolean }) => Deno.remove(path, opts),
   runCommand,
+  errors: {
+    isNotFound: (e: unknown): boolean => e instanceof Deno.errors.NotFound,
+  },
 });

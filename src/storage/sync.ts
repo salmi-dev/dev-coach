@@ -5,6 +5,7 @@
 import { Database } from '@db/sqlite';
 import { join, relative } from '@std/path';
 import { walk } from '@std/fs';
+import { runtime } from '../utils/runtime/index.ts';
 import { parseFrontmatter } from './frontmatter.ts';
 import type { ItemType } from './library.ts';
 
@@ -74,14 +75,14 @@ export async function rebuildIndex(db: Database, libraryPath: string): Promise<n
     const dirPath = join(libraryPath, dir);
 
     try {
-      await Deno.stat(dirPath);
+      await runtime.stat(dirPath);
     } catch {
       continue; // Directory doesn't exist, skip
     }
 
     for await (const entry of walk(dirPath, { exts: ['.md'], includeDirs: false })) {
       try {
-        const content = await Deno.readTextFile(entry.path);
+        const content = await runtime.readTextFile(entry.path);
         const { metadata } = parseFrontmatter(content);
 
         const relativePath = relative(libraryPath, entry.path);

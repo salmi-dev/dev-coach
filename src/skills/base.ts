@@ -8,6 +8,7 @@ import { search, type SearchFilters, type SearchResult } from '../storage/search
 import { logSession } from '../db/logger.ts';
 import { savePrompt } from '../storage/save-prompt.ts';
 import { copyToClipboard, detectClipboardTool } from '../utils/clipboard.ts';
+import { readPromptLine } from '../utils/prompt.ts';
 import { closeDb, getDb } from '../db/connection.ts';
 import { loadConfig } from '../config/config.ts';
 import { getLibraryPath } from '../utils/xdg.ts';
@@ -127,17 +128,10 @@ export async function runSkill(
   if (commands.length > 0) {
     const clipTool = await detectClipboardTool();
     if (clipTool) {
-      const buf = new Uint8Array(64);
-      Deno.stdout.writeSync(new TextEncoder().encode('📋 Copy command? [Y/n] '));
-      try {
-        const n = Deno.stdin.readSync(buf);
-        const answer = n ? new TextDecoder().decode(buf.subarray(0, n)).trim() : '';
-        if (answer.toLowerCase() !== 'n') {
-          const copied = await copyToClipboard(commands[0]);
-          if (copied) console.log('📋 Copied to clipboard!');
-        }
-      } catch {
-        // Non-interactive, skip
+      const answer = (await readPromptLine('📋 Copy command? [Y/n] ')) ?? '';
+      if (answer.trim().toLowerCase() !== 'n') {
+        const copied = await copyToClipboard(commands[0]);
+        if (copied) console.log('📋 Copied to clipboard!');
       }
     }
   }

@@ -5,6 +5,7 @@
 import { parse as parseYaml, stringify as stringifyYaml } from '@std/yaml';
 import { dirname } from '@std/path';
 import { join } from '@std/path';
+import { runtime } from '../utils/runtime/index.ts';
 import { getConfigDir } from '../utils/xdg.ts';
 import { CoachConfig, DEFAULT_CONFIG, validateConfigFields } from './schema.ts';
 
@@ -21,7 +22,7 @@ export async function loadConfig(overridePath?: string): Promise<CoachConfig> {
   const path = getConfigPath(overridePath);
 
   try {
-    const content = await Deno.readTextFile(path);
+    const content = await runtime.readTextFile(path);
     const parsed = parseYaml(content) as Partial<CoachConfig> | null;
 
     if (!parsed || typeof parsed !== 'object') {
@@ -32,7 +33,7 @@ export async function loadConfig(overridePath?: string): Promise<CoachConfig> {
     const config: CoachConfig = {
       ...DEFAULT_CONFIG,
       ...parsed,
-      os: Deno.build.os, // always auto-detect
+      os: runtime.osPlatform(), // always auto-detect
     };
 
     // Validate
@@ -43,7 +44,7 @@ export async function loadConfig(overridePath?: string): Promise<CoachConfig> {
 
     return config;
   } catch (e) {
-    if (e instanceof Deno.errors.NotFound) {
+    if (runtime.errors.isNotFound(e)) {
       return { ...DEFAULT_CONFIG };
     }
     throw e;
@@ -58,8 +59,8 @@ export async function saveConfig(config: CoachConfig, overridePath?: string): Pr
   const { os: _os, ...writableConfig } = config;
 
   const yaml = stringifyYaml(writableConfig as Record<string, unknown>);
-  await Deno.mkdir(dirname(path), { recursive: true });
-  await Deno.writeTextFile(path, yaml);
+  await runtime.mkdir(dirname(path), { recursive: true });
+  await runtime.writeTextFile(path, yaml);
 }
 
 /** Validate a config object. Returns error message or null. */

@@ -5,6 +5,7 @@
  */
 
 import { join } from '@std/path';
+import { runtime } from './runtime/index.ts';
 import { getHomeDir, getOS } from './platform.ts';
 
 const APP_NAME = 'dev-coach';
@@ -19,12 +20,12 @@ export function expandTilde(path: string): string {
 
 /** Get the config directory: $XDG_CONFIG_HOME/dev-coach/ */
 export function getConfigDir(): string {
-  const xdg = Deno.env.get('XDG_CONFIG_HOME');
+  const xdg = runtime.env.get('XDG_CONFIG_HOME');
   if (xdg) return join(xdg, APP_NAME);
 
   const os = getOS();
   if (os === 'windows') {
-    const appData = Deno.env.get('APPDATA');
+    const appData = runtime.env.get('APPDATA');
     if (appData) return join(appData, APP_NAME);
   }
 
@@ -33,12 +34,12 @@ export function getConfigDir(): string {
 
 /** Get the data directory: $XDG_DATA_HOME/dev-coach/ */
 export function getDataDir(): string {
-  const xdg = Deno.env.get('XDG_DATA_HOME');
+  const xdg = runtime.env.get('XDG_DATA_HOME');
   if (xdg) return join(xdg, APP_NAME);
 
   const os = getOS();
   if (os === 'windows') {
-    const localAppData = Deno.env.get('LOCALAPPDATA');
+    const localAppData = runtime.env.get('LOCALAPPDATA');
     if (localAppData) return join(localAppData, APP_NAME);
   }
 
