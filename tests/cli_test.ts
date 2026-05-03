@@ -53,14 +53,15 @@ Deno.test('coach --help shows subcommands', async () => {
 
 Deno.test('coach ask runs real skill (not stub)', async () => {
   const cmd = new Deno.Command('deno', {
-    args: ['run', '--allow-read', '--allow-write', '--allow-env', '--allow-run', '--allow-ffi', 'cli.ts', 'ask', 'test question'],
+    args: ['run', '--allow-read', '--allow-write', '--allow-env', '--allow-run', '--allow-ffi', '--allow-net', 'cli.ts', 'ask', 'test question'],
     stdout: 'piped',
     stderr: 'piped',
     stdin: 'null',
   });
-  const { stdout, success } = await cmd.output();
+  const { stdout, stderr, success } = await cmd.output();
   const out = new TextDecoder().decode(stdout);
-  assertEquals(success, true);
+  const err = new TextDecoder().decode(stderr);
+  assertEquals(success, true, `subprocess failed.\nstdout: ${out}\nstderr: ${err}`);
   assertEquals(out.includes('coach:ask'), true);
 });
 
