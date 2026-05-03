@@ -1,17 +1,42 @@
 /**
- * Runtime adapter — Bun implementation (placeholder).
+ * Runtime adapter — Bun implementation.
  *
- * This stub exists so static analysis (`deno check`, `deno doc`) can resolve
- * the dynamic import in `./index.ts`. The full implementation lands in Track
- * B Group 3 (tasks 3.1, 3.3, 3.4); see openspec change
- * `boost-jsr-score-and-runtime-compat`.
+ * Most of the surface is shared with Node via {@link buildNodeCompatRuntime}
+ * (Bun fully supports the `node:` module namespace and the `process` global).
+ * The Bun-specific bit is `runCommand`, which uses `Bun.spawn` for parity
+ * with Bun's own ergonomics (faster startup than spawning a child shell).
  *
- * Until then, calling `runtime` on a Bun host throws with a clear message.
+ * This module is only loaded when {@link detectRuntime} returns `"bun"`; on
+ * Deno and Node hosts it is never evaluated.
  *
  * @module
  */
 
-import type { Runtime } from './index.ts';
-import { notYetImplemented } from './_stub.ts';
+import type { CommandResult, Runtime } from './index.ts';
+import { buildNodeCompatRuntime } from './_node-compat.ts';
 
-export const runtime: Runtime = notYetImplemented('bun');
+// Bun's globalThis.Bun is not declared in the @types/node we have available
+// in CI. Cast at the boundary; downstream code uses the typed Runtime.
+// deno-lint-ignore no-explicit-any
+const BunGlobal: any = (globalThis as any).Bun;
+
+async function bunRunCommand(
+  cmd: string,
+  args: string[],
+  opts: { stdin?: string } = {},
+): Promise<CommandResult> {
+  const proc = BunGlobal.spawn([cmd, ...args], {
+    stdin: opts.stdin !== undefined ? new TextEncoder().encode(opts.stdin) : 'ignore',
+    stdout: 'pipe',
+    stderr: 'pipe',
+  });
+  const [stdout, stderr] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+  ]);
+  const code: number = await proc.exited;
+  return { code, stdout, stderr };
+}
+
+/** The Bun-backed runtime adapter instance. */
+export const runtime: Runtime = buildNodeCompatRuntime('bun', bunRunCommand);
