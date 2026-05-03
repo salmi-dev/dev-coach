@@ -203,6 +203,17 @@ deno task verify           # Quality gate (see below)
 deno task build            # Compile binary
 ```
 
+### JSR package & overview
+
+Published at [`@salmidev/dev-coach`](https://jsr.io/@salmidev/dev-coach) on JSR. The JSR landing page (the "Overview" tab) is rendered from the **module-level
+JSDoc at the top of [`mod.ts`](./mod.ts)** — not from this README. This is pinned via `publish.readmeSource:
+"jsdoc"` in [`deno.json`](./deno.json).
+
+**If you edit `mod.ts`'s top JSDoc you are editing the JSR landing page.** Keep the overview block dense, code-heavy, and library-focused (three `@example`
+blocks minimum). This README stays as the GitHub-side long-form doc covering CLI install, skills, and configuration.
+
+We target a **100% JSR score** for the package; current breakdown is visible at the JSR package URL above.
+
 ### Quality gate
 
 `deno task verify` is the single command that gates a change before archive. It runs, in order:

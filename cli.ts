@@ -1,8 +1,31 @@
 #!/usr/bin/env -S deno run --allow-read --allow-write --allow-env --allow-run --allow-ffi
 
 /**
- * Dev Coach CLI — AI-powered coding coach
- * Entry point for the `coach` command.
+ * # Dev Coach CLI
+ *
+ * Entry point for the `coach` command — an AI-powered coding coach that helps you save,
+ * search, and revisit snippets, TLDRs, and mini-projects from your terminal.
+ *
+ * Most users install the binary (`deno install -gA jsr:@salmidev/dev-coach/cli --name coach`)
+ * and invoke it as `coach <subcommand>`. Importing this module from code is unusual; the
+ * library API at {@link mod.ts | `@salmidev/dev-coach`} is the supported programmatic surface.
+ *
+ * Available subcommands include `init`, `ask`, `explain`, `compare`, `sandbox`, `review`,
+ * `project`, `stats`, `tldr`, `snippet`, `install-aliases`, and `install-pi`. Run
+ * `coach --help` for the full list.
+ *
+ * @example Run a quick question, then browse a saved TLDR
+ * ```sh
+ * coach ask 'how does serde_json::from_str work'
+ * coach tldr show serde-json-from-str
+ * ```
+ *
+ * @example List recent snippets in a given language
+ * ```sh
+ * coach snippet list --lang rust --limit 10
+ * ```
+ *
+ * @module
  */
 
 import { parseArgs } from '@std/cli/parse-args';
