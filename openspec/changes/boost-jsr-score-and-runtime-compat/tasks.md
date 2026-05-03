@@ -2,8 +2,10 @@
 
 - [x] 1.1 Add `description` field to `deno.json` (≤ 120 chars, search-friendly, e.g.
       `"AI-powered coding coach: save snippets, TLDRs, and projects with SQLite-backed search."`)
-- [x] 1.2 Add `"readmeSource": "jsdoc"` under `publish` in `deno.json` so the JSR overview source is pinned in version control (not relying on JSR UI defaults)
-- [x] 1.3 Add `publish.runtimeCompat` to `deno.json` with `{ "deno": true }` only (Bun/Node flipped on later, after track B)
+- [x] 1.2 Configure `readmeSource: "jsdoc"` server-side on JSR (verified already set via API). **Note**: cannot live in `deno.json` — `deno publish` rejects
+      unknown `publish` fields. Document the desired value + `curl PATCH` recipe in `design.md` D7.
+- [x] 1.3 Configure `runtimeCompat: { "deno": true }` server-side on JSR (Bun/Node added in task 8.1). Same constraint as 1.2 — not a `deno.json` field.
+      Pending: actually PATCH this on JSR (currently `{}` server-side); will be done after the v0.2.2 publish lands so we have a verified score.
 - [x] 1.4 **Rewrite `mod.ts` top-of-file JSDoc as the JSR landing page** — this is what visitors see first on jsr.io:
   - [x] 1.4.1 One-paragraph “what is this” (≤ 3 sentences) targeting library consumers (not CLI users)
   - [x] 1.4.2 Bulleted public-API map by area (Config / Database / Storage / Search / Utilities) mirroring the existing section comments in `mod.ts`
@@ -80,7 +82,8 @@
 
 ## 8. JSR runtime-compat flip
 
-- [ ] 8.1 Update `deno.json` `publish.runtimeCompat` to `{ "deno": true, "bun": true, "node": true, "browser": false, "workerd": false }`
+- [ ] 8.1 PATCH `runtimeCompat` on JSR via `curl PATCH https://api.jsr.io/scopes/salmidev/packages/dev-coach` to
+      `{ "deno": true, "bun": true, "node": true, "browser": false, "workerd": false }` (server-side; not a `deno.json` field — see D7)
 - [ ] 8.2 Update README "Supported runtimes" section with the matrix and Node version requirements (≥22 with `node:sqlite`, or any Node with `better-sqlite3`
       installed)
 - [ ] 8.3 Run `deno task verify`

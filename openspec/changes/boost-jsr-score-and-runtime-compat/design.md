@@ -151,19 +151,29 @@ correctness.
 ### D7. Module docs and description — done in code, not just JSR settings
 
 - `cli.ts` gets a `/** ... @module */` block (matching `mod.ts`) with a one-paragraph summary and at least one `coach <subcommand>` `@example`.
-- `deno.json` gains a `"description"` field. JSR reads it on publish.
-- The runtime-compat flags (`"deno": true`, `"bun": true`, `"node": true`, `"browser": false`, `"workerd": false`) go in `deno.json` under
-  `"publish.runtimeCompat"` (per JSR docs) so they're versioned alongside code, not toggled in the JSR UI.
+- `deno.json` gains a top-level `"description"` field. JSR reads it on publish (verified: Deno CLI accepts top-level `description`).
+- The runtime-compat flags (`"deno": true`, `"bun": true`, `"node": true`, `"browser": false`, `"workerd": false`) and `readmeSource: "jsdoc"` are configured
+  **server-side on JSR** via the JSR API or web UI. They are NOT in `deno.json`: we tried `publish.readmeSource` / `publish.runtimeCompat` and `deno publish`
+  failed with `unknown field 'readmeSource', expected 'include' or 'exclude'`. There is no top-level Deno schema slot for these at this time.
 
-**Why versioned, not UI-only**: any future contributor sees the claim in `deno.json`, and CI can validate it (a future change can add a check that
-`runtimeCompat` matches the runtimes proven by the `test-*` jobs).
+**Reproducible configuration** (run by a maintainer once after publish, or after any drift; token from https://jsr.io/account/tokens):
 
-### D8. JSR overview is `mod.ts` JSDoc, pinned via `readmeSource: "jsdoc"`
+```bash
+curl -X PATCH https://api.jsr.io/scopes/salmidev/packages/dev-coach \
+  -H "Authorization: Bearer $JSR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"runtimeCompat":{"deno":true,"bun":true,"node":true,"browser":false,"workerd":false}}'
+```
+
+`readmeSource` already defaults to `"jsdoc"` for our package (verified via JSR API), so no PATCH is currently needed; the value is documented here so a
+maintainer can re-assert it if it ever drifts.
+
+### D8. JSR overview is `mod.ts` JSDoc, with `readmeSource: "jsdoc"` set server-side
 
 JSR currently displays `mod.ts`'s module JSDoc on the package landing page (the JSR API returns `"readmeSource":"jsdoc"`). Today that block is four lines and
 looks like a stub on JSR. We will:
 
-- **Pin the choice explicitly**: add `"readmeSource": "jsdoc"` under `"publish"` in `deno.json` so the choice is versioned, not relying on the JSR UI default.
+- **Document the setting** in this design and the README. The setting is server-side on JSR, not in `deno.json` (see D7); we re-assert via JSR API if it drifts.
 - **Rewrite the `mod.ts` module-level JSDoc** as a 50–80-line overview with: one-paragraph what-this-is, a bulleted public-API map (Config / Database / Storage
   / Search / Utilities) mirroring the section comments already in the file, and ≥ 3 `@example` blocks covering the headline workflows (load config + save an
   item, run a search, open the DB and rebuild the index).
