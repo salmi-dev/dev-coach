@@ -39,11 +39,11 @@
 
 ## 3. Runtime adapter — Bun and Node implementations
 
-- [ ] 3.1 Create `src/utils/runtime/bun.ts` using `Bun.*`, `bun:fs`, and Node-compatible APIs Bun exposes
-- [ ] 3.2 Create `src/utils/runtime/node.ts` using `node:fs/promises`, `node:os`, `node:process`, `node:child_process` (all dynamic-imported)
-- [ ] 3.3 Implement `runCommand` on each (Deno: `Deno.Command`; Bun: `Bun.spawn`; Node: `node:child_process.execFile`)
-- [ ] 3.4 Implement `consoleSize` with graceful fallback (`{ columns: 80, rows: 24 }`) when not a TTY on any runtime
-- [ ] 3.5 Add detection unit tests that stub `globalThis.Bun` / `globalThis.process` and assert `runtime.name`
+- [x] 3.1 Create `src/utils/runtime/bun.ts` using `Bun.*`, `bun:fs`, and Node-compatible APIs Bun exposes
+- [x] 3.2 Create `src/utils/runtime/node.ts` using `node:fs/promises`, `node:os`, `node:process`, `node:child_process` (all dynamic-imported)
+- [x] 3.3 Implement `runCommand` on each (Deno: `Deno.Command`; Bun: `Bun.spawn`; Node: `node:child_process.execFile`)
+- [x] 3.4 Implement `consoleSize` with graceful fallback (`{ columns: 80, rows: 24 }`) when not a TTY on any runtime
+- [x] 3.5 Add detection unit tests that stub `globalThis.Bun` / `globalThis.process` and assert `runtime.name`
 
 ## 4. SQLite adapter — interface and Deno implementation
 
