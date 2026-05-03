@@ -77,8 +77,8 @@
       `node --test tests/<cross-runtime-subset>` (Node 22 exercises the better-sqlite3 fallback path; Node 24 uses built-in `node:sqlite`)
 - [x] 7.3 Initially set `continue-on-error: true` on both new jobs so a transient hiccup doesn't block Deno releases
 - [x] 7.4 Add both jobs to `ci-gate.needs` with appropriate result handling (displayed but non-blocking until 7.6)
-- [x] 7.5 Curate the cross-runtime test subset (`tests/cross-runtime/`) — includes the SQLite adapter tests (`db_sqlite.test.ts`) and the runtime adapter
-      smoke tests (`runtime.test.ts`)
+- [x] 7.5 Curate the cross-runtime test subset (`tests/cross-runtime/`) — includes the SQLite adapter tests (`db_sqlite.test.ts`) and the runtime adapter smoke
+      tests (`runtime.test.ts`)
 - [ ] 7.6 Once green for ≥ 5 consecutive `main` builds, flip `continue-on-error: false`
 
 ## 8. JSR runtime-compat flip
