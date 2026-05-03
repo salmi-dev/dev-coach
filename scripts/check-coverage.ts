@@ -70,7 +70,17 @@ export async function checkCoverage(profileDir: string): Promise<number> {
   }
 
   const cmd = new Deno.Command('deno', {
-    args: ['coverage', profileDir, '--include=src/'],
+    args: [
+      'coverage',
+      profileDir,
+      '--include=src/',
+      // Exclude per-runtime adapters that cannot be exercised on a Deno host.
+      // The cross-runtime CI matrix (Group 7 of boost-jsr-score-and-runtime-compat)
+      // exercises these on Bun + Node; combining coverage across runtimes is
+      // out of scope for now.
+      '--exclude=src/utils/runtime/(bun|node|_node-compat)\\.ts$',
+      '--exclude=src/db/sqlite/(bun|node)\\.ts$',
+    ],
     stdout: 'piped',
     stderr: 'piped',
   });
