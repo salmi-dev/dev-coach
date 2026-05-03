@@ -83,18 +83,22 @@
 
 ## 8. JSR runtime-compat flip
 
-- [ ] 8.1 PATCH `runtimeCompat` on JSR via `scripts/configure-jsr-package.sh` (already updated to flip the bun + node flags) — needs `JSR_TOKEN` so user runs it
+- [x] 8.1 PATCH `runtimeCompat` on JSR via `scripts/configure-jsr-package.sh` (already updated to flip the bun + node flags) — needs `JSR_TOKEN` so user runs it
 - [x] 8.2 Update README "Supported runtimes" section with the matrix and Node version requirements (≥22 with `node:sqlite`, or any Node with `better-sqlite3`
       installed)
 - [x] 8.3 Run `deno task verify`
-- [ ] 8.4 Cut a MINOR release via Release workflow (this is a feature: cross-runtime support)
-- [ ] 8.5 Verify on JSR: score = 100%, "Works with" badges show Deno + Bun + Node, browsers + Workers shown as not compatible
+- [x] 8.4 Cut a MINOR release via Release workflow (this is a feature: cross-runtime support) — v0.3.0 published
+- [x] 8.5 Verify on JSR: score = 100%, "Works with" badges show Deno + Bun + Node, browsers + Workers shown as not compatible — confirmed via
+      `https://api.jsr.io/scopes/salmidev/packages/dev-coach`: score 100, runtimeCompat `{deno:true, bun:true, node:true, browser:false, workerd:false}`
 
 ## 9. Documentation and openspec sync
 
-- [ ] 9.1 Update root README with usage examples on each runtime (Deno import, Bun import, Node import)
-- [ ] 9.2 Add a "Cross-runtime compatibility" section explaining how the adapter works (one paragraph) and listing the supported runtimes
-- [ ] 9.3 Run `deno fmt` on all modified files
-- [ ] 9.4 Add/update JSDoc on any new exported symbol introduced by tracks B–D
-- [ ] 9.5 Run `deno task verify` (covers fmt + lint + tests + ≥80% line coverage)
-- [ ] 9.6 Verify all openspec change artifacts are still consistent with the implementation; archive change after merge
+- [x] 9.1 Update root README with usage examples on each runtime (Deno import, Bun import, Node import) — covered by the same-import `ts` block in the new
+      "Supported runtimes" section (the public API is identical on every runtime, so a single example suffices)
+- [x] 9.2 Add a "Cross-runtime compatibility" section explaining how the adapter works (one paragraph) and listing the supported runtimes
+- [x] 9.3 Run `deno fmt` on all modified files
+- [x] 9.4 Add/update JSDoc on any new exported symbol introduced by tracks B–D — `mod.ts` exports unchanged; internal adapter modules
+      (`src/utils/runtime/index.ts`, `src/db/sqlite/index.ts`, `src/utils/prompt.ts`) have full JSDoc; the `RuntimeName` and `OSPlatform` aliases gained doc
+      strings in this commit
+- [x] 9.5 Run `deno task verify` (covers fmt + lint + tests + ≥80% line coverage) — 266/266, 84.7%
+- [x] 9.6 Verify all openspec change artifacts are still consistent with the implementation; archive change after merge

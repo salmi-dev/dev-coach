@@ -19,9 +19,14 @@
 import { detectRuntime } from './detect.ts';
 
 /** Names of the runtimes this adapter supports. */
+/** Identifier for one of the three supported JS runtimes. */
 export type RuntimeName = 'deno' | 'bun' | 'node';
 
 /** Operating-system family, as reported by the runtime. */
+/**
+ * Operating-system family reported by {@link Runtime.os}. The `'other'`
+ * bucket covers anything the adapter can't classify (e.g. AIX, SunOS).
+ */
 export type OSPlatform = 'darwin' | 'linux' | 'windows' | 'freebsd' | 'other';
 
 /** A single directory entry from {@link Runtime.readDir}. */
