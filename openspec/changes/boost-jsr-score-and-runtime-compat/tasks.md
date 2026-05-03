@@ -30,12 +30,12 @@
 
 ## 2. Runtime adapter — surface and Deno implementation
 
-- [ ] 2.1 Create `src/utils/runtime/index.ts` exporting the `runtime` object signature and the `RuntimeName` type defined in design.md §D2
-- [ ] 2.2 Implement runtime detection (Deno → Bun → Node order, throw on unknown) in `src/utils/runtime/detect.ts`
-- [ ] 2.3 Create `src/utils/runtime/deno.ts` mapping every adapter method to its `Deno.*` counterpart
-- [ ] 2.4 Wire `src/utils/runtime/index.ts` to dynamic-import the right impl based on detection
-- [ ] 2.5 Add JSDoc on every exported symbol (the `runtime` object, the `RuntimeName` type, the `runtime` instance)
-- [ ] 2.6 Add `tests/runtime_test.ts` covering: detection on Deno, every method round-trips a real value, error on missing methods
+- [x] 2.1 Create `src/utils/runtime/index.ts` exporting the `runtime` object signature and the `RuntimeName` type defined in design.md §D2
+- [x] 2.2 Implement runtime detection (Deno → Bun → Node order, throw on unknown) in `src/utils/runtime/detect.ts`
+- [x] 2.3 Create `src/utils/runtime/deno.ts` mapping every adapter method to its `Deno.*` counterpart
+- [x] 2.4 Wire `src/utils/runtime/index.ts` to dynamic-import the right impl based on detection
+- [x] 2.5 Add JSDoc on every exported symbol (the `runtime` object, the `RuntimeName` type, the `runtime` instance)
+- [x] 2.6 Add `tests/runtime_test.ts` covering: detection on Deno, every method round-trips a real value, error on missing methods
 
 ## 3. Runtime adapter — Bun and Node implementations
 
