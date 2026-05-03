@@ -67,11 +67,12 @@ No file under `src/db/` other than the adapter SHALL import `@db/sqlite`, `bun:s
 
 ### Requirement: Supported and excluded runtimes are explicit
 
-The package SHALL declare its runtime compatibility in `deno.json` under `publish.runtimeCompat` (or the field JSR documents at the time of release). Supported
-runtimes SHALL be: `deno`, `bun`, `node`. Explicitly excluded SHALL be: `browser`, `workerd` (Cloudflare Workers).
+The package SHALL declare its runtime compatibility on JSR (via the JSR API or web UI — the field is **not configurable from `deno.json`** because Deno CLI
+rejects unknown `publish` fields). Supported runtimes SHALL be: `deno`, `bun`, `node`. Explicitly excluded SHALL be: `browser`, `workerd` (Cloudflare Workers).
 
 The README SHALL include a "Supported runtimes" section that lists the supported runtimes with their minimum versions and lists browsers / Workers as
-out-of-scope with a one-line reason (filesystem + SQLite required).
+out-of-scope with a one-line reason (filesystem + SQLite required). The desired JSR `runtimeCompat` map SHALL be documented in `design.md` so that re-applying
+it after any drift is mechanical.
 
 #### Scenario: JSR shows three compatible runtimes
 
@@ -108,16 +109,19 @@ Line count guidance: aim for 50–80 lines of JSDoc. Dense, scannable, code-heav
 - **THEN** the module-level documentation block SHALL appear at the top of the output
 - **AND** SHALL match (modulo formatting) the JSR landing page
 
-### Requirement: JSR overview source is pinned in `deno.json`
+### Requirement: JSR overview source is configured server-side
 
-The package SHALL declare `publish.readmeSource` (the JSR-recognised field) explicitly in `deno.json`. The chosen value SHALL be `"jsdoc"` so that the source of
-truth for the JSR overview is the `mod.ts` module doc, versioned alongside the code.
+The `readmeSource` setting on JSR SHALL be `"jsdoc"` so that the `mod.ts` module-level JSDoc renders as the package landing page. This setting is **not
+configurable from `deno.json`** — the Deno CLI's `deno publish` rejects unknown fields under `publish`. It is therefore configured via the JSR API
+(`PATCH /scopes/{scope}/packages/{name}`) or the JSR web UI, and SHALL be re-asserted by maintainers if it ever drifts.
 
-#### Scenario: `readmeSource` is committed and explicit
+The desired value SHALL be documented in `design.md` and the README so that the configuration is reproducible.
 
-- **WHEN** a reviewer reads `deno.json`
-- **THEN** they SHALL see `"readmeSource": "jsdoc"` under `publish`
-- **AND** the value SHALL NOT be relied on from JSR UI defaults
+#### Scenario: JSR API reports `readmeSource: "jsdoc"`
+
+- **WHEN** `GET https://api.jsr.io/scopes/salmidev/packages/dev-coach` is called
+- **THEN** the response SHALL include `"readmeSource": "jsdoc"`
+- **AND** the JSR overview tab SHALL render the rewritten `mod.ts` JSDoc
 
 ### Requirement: Both entrypoints have module documentation
 
