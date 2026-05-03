@@ -2,7 +2,7 @@
  * Profile builder — infer user profile from session history.
  */
 
-import { Database } from "@db/sqlite";
+import { Database } from '@db/sqlite';
 
 /**
  * Rebuild profile from sessions table. Writes computed data to profile table.
@@ -13,20 +13,20 @@ export function rebuildProfile(db: Database): void {
     `SELECT lang, COUNT(*) as c FROM sessions WHERE lang IS NOT NULL
      GROUP BY lang ORDER BY c DESC LIMIT 5`,
   ).all() as Array<{ lang: string; c: number }>;
-  setProfile(db, "primary_languages", langs.map((r) => r.lang));
+  setProfile(db, 'primary_languages', langs.map((r) => r.lang));
 
   // Peak hours (top 3 by session count)
   const hours = db.prepare(
     `SELECT CAST(strftime('%H', ts) AS INTEGER) as hour, COUNT(*) as c
      FROM sessions GROUP BY hour ORDER BY c DESC LIMIT 3`,
   ).all() as Array<{ hour: number; c: number }>;
-  setProfile(db, "peak_hours", hours.map((r) => r.hour));
+  setProfile(db, 'peak_hours', hours.map((r) => r.hour));
 
   // Favorite modes
   const modes = db.prepare(
     `SELECT mode, COUNT(*) as c FROM sessions GROUP BY mode ORDER BY c DESC`,
   ).all() as Array<{ mode: string; c: number }>;
-  setProfile(db, "favorite_modes", modes.map((r) => r.mode));
+  setProfile(db, 'favorite_modes', modes.map((r) => r.mode));
 
   // Recent topics (top 10 tags from last 30 days)
   const recentSessions = db.prepare(
@@ -47,7 +47,7 @@ export function rebuildProfile(db: Database): void {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 10)
     .map(([tag]) => tag);
-  setProfile(db, "recent_topics", topTags);
+  setProfile(db, 'recent_topics', topTags);
 }
 
 /**
@@ -60,7 +60,7 @@ export function calculateStreak(db: Database): number {
 
   if (rows.length === 0) return 0;
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = new Date().toISOString().split('T')[0];
   if (rows[0].d !== today) return 0;
 
   let streak = 1;
@@ -83,9 +83,9 @@ export function calculateStreak(db: Database): number {
  */
 export function monthOverMonthDelta(db: Database): { current: number; previous: number; delta: number } {
   const now = new Date();
-  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-  const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, "0")}`;
+  const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
 
   const current = (db.prepare(
     `SELECT COUNT(*) as c FROM sessions WHERE strftime('%Y-%m', ts) = ?`,
@@ -99,14 +99,15 @@ export function monthOverMonthDelta(db: Database): { current: number; previous: 
 }
 
 function setProfile(db: Database, key: string, value: unknown): void {
-  db.prepare("INSERT OR REPLACE INTO profile (key, value) VALUES (?, ?)").run(
+  db.prepare('INSERT OR REPLACE INTO profile (key, value) VALUES (?, ?)').run(
     key,
     JSON.stringify(value),
   );
 }
 
+/** Read a profile value by key, returning `null` when absent. */
 export function getProfile(db: Database, key: string): unknown {
-  const row = db.prepare("SELECT value FROM profile WHERE key = ?").get(key) as
+  const row = db.prepare('SELECT value FROM profile WHERE key = ?').get(key) as
     | { value: string }
     | undefined;
   return row ? JSON.parse(row.value) : null;

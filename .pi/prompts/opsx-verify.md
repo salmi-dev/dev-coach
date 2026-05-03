@@ -4,7 +4,8 @@ description: Verify implementation matches change artifacts before archiving
 
 Verify that an implementation matches the change artifacts (specs, tasks, design).
 
-**Input**: Optionally specify a change name after `/opsx:verify` (e.g., `/opsx:verify add-auth`). If omitted, check if it can be inferred from conversation context. If vague or ambiguous you MUST prompt for available changes.
+**Input**: Optionally specify a change name after `/opsx:verify` (e.g., `/opsx:verify add-auth`). If omitted, check if it can be inferred from conversation
+context. If vague or ambiguous you MUST prompt for available changes.
 
 **Steps**
 
@@ -12,9 +13,8 @@ Verify that an implementation matches the change artifacts (specs, tasks, design
 
    Run `openspec list --json` to get available changes. Use the **AskUserQuestion tool** to let the user select.
 
-   Show changes that have implementation tasks (tasks artifact exists).
-   Include the schema used for each change if available.
-   Mark changes with incomplete tasks as "(In Progress)".
+   Show changes that have implementation tasks (tasks artifact exists). Include the schema used for each change if available. Mark changes with incomplete tasks
+   as "(In Progress)".
 
    **IMPORTANT**: Do NOT guess or auto-select a change. Always let the user choose.
 
@@ -154,6 +154,7 @@ Verify that an implementation matches the change artifacts (specs, tasks, design
 **Output Format**
 
 Use clear markdown with:
+
 - Table for summary scorecard
 - Grouped lists for issues (CRITICAL/WARNING/SUGGESTION)
 - Code references in format: `file.ts:123`

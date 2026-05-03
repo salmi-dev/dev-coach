@@ -1,16 +1,19 @@
 # Coach 06 — Stats & Pi Integration
 
 ## What
+
 Implement `coach:stats` dashboard skill and package everything as installable pi skills with custom tools.
 
 ## Scope
 
 ### `coach:stats` (`src/skills/stats.ts`)
+
 ```
- 📊  coach:stats
+📊  coach:stats
 ```
 
 #### Default View — Monthly Dashboard
+
 ```
 ┌─────────────────────────────────────────┐
 │  📊 Dev Coach Stats — April 2026       │
@@ -38,6 +41,7 @@ Implement `coach:stats` dashboard skill and package everything as installable pi
 ```
 
 #### Subcommands
+
 - `coach stats` — default monthly view
 - `coach stats weekly` — this week's activity
 - `coach stats lang rust` — stats for a specific language
@@ -45,12 +49,14 @@ Implement `coach:stats` dashboard skill and package everything as installable pi
 - `coach stats profile` — show inferred profile (languages, patterns, preferences)
 
 #### Profile Builder (`src/db/profile.ts`)
+
 - Rebuild profile from `sessions` table
 - Detect: primary languages, peak hours, favorite modes, topic trends
 - Used by all skills for context-awareness (change 03-05 reference this)
 - Updates `profile` table in DB
 
 #### Dashboard Regeneration
+
 - `coach stats` also triggers `library/README.md` regeneration
 - Fresh stats, recent items, project list
 - Can be run standalone: `coach dashboard`
@@ -58,7 +64,9 @@ Implement `coach:stats` dashboard skill and package everything as installable pi
 ### Pi Integration (`src/pi/`)
 
 #### Pi Skills — Final Packaging
+
 All 7 skill SKILL.md files, each containing:
+
 - Description and trigger pattern
 - Input expectations
 - What tools the skill uses
@@ -66,6 +74,7 @@ All 7 skill SKILL.md files, each containing:
 - Example interactions
 
 Skills:
+
 - `coach-ask/SKILL.md`
 - `coach-explain/SKILL.md`
 - `coach-compare/SKILL.md`
@@ -75,6 +84,7 @@ Skills:
 - `coach-stats/SKILL.md`
 
 #### Pi Custom Tools
+
 - `coach-save` — Save a snippet/tldr/project to library
   - Params: type, title, content, lang, tags
   - Handles: frontmatter, file writing, DB sync, dashboard update
@@ -89,6 +99,7 @@ Skills:
   - Returns: session ID
 
 #### Install Flow
+
 - `coach install-pi` command:
   - Detects pi config directory (`.pi/`)
   - Copies skill SKILL.md files to `.pi/skills/`
@@ -98,12 +109,14 @@ Skills:
 - Uninstall: `coach uninstall-pi`
 
 #### Deno Publish Config
+
 - `deno.json` publish config for JSR
 - `jsr:@ssal/dev-coach`
 - Exports: `mod.ts` (library API), `cli.ts` (CLI binary)
 - `deno install -g` instructions in project README
 
 ### Project README (`README.md` at repo root)
+
 - What is Dev Coach
 - Installation instructions (JSR + manual)
 - All 7 skills with examples
@@ -112,9 +125,11 @@ Skills:
 - ASCII art and screenshots
 
 ## Dependencies
+
 - Requires: all previous changes (01-05)
 
 ## Acceptance
+
 - `coach stats` → renders ASCII dashboard with real data
 - `coach stats lang rust` → filtered view
 - `coach stats profile` → shows inferred user profile

@@ -1,10 +1,13 @@
 ## Context
 
-Changes 01–04 delivered: Deno CLI foundation, storage layer (CRUD, search, frontmatter, dashboard), simple skills (ask, explain, compare with base Skill interface, SessionContext, SkillResult, runSkill runner), and interactive skills (ApproachCollector, sandbox, review, pi tools). The project skill is the most complex — a multi-turn conversation producing a complete directory of files.
+Changes 01–04 delivered: Deno CLI foundation, storage layer (CRUD, search, frontmatter, dashboard), simple skills (ask, explain, compare with base Skill
+interface, SessionContext, SkillResult, runSkill runner), and interactive skills (ApproachCollector, sandbox, review, pi tools). The project skill is the most
+complex — a multi-turn conversation producing a complete directory of files.
 
 ## Goals / Non-Goals
 
 **Goals:**
+
 - 4-phase multi-turn flow: clarify requirements → present plan → generate files → wrap up
 - Project templates for common types (CLI, API, script, library)
 - Produce actual runnable projects with README, source, config, and optional tests
@@ -12,6 +15,7 @@ Changes 01–04 delivered: Deno CLI foundation, storage layer (CRUD, search, fro
 - Pi skill definition that guides agents through the phases
 
 **Non-Goals:**
+
 - Generating complex multi-service architectures
 - CI/CD setup or deployment configs
 - Package publishing setup (that's the tool itself in change 06)
@@ -22,6 +26,7 @@ Changes 01–04 delivered: Deno CLI foundation, storage layer (CRUD, search, fro
 ### 1. Phase-based conversation model
 
 **Choice**: 4 explicit phases with clear transitions. Each phase has a defined input/output contract:
+
 - Phase 1 (Clarify): input=idea → output=project brief (internal)
 - Phase 2 (Plan): input=brief → output=file tree + descriptions (shown to user)
 - Phase 3 (Implement): input=approved plan → output=files on disk
@@ -31,9 +36,11 @@ Changes 01–04 delivered: Deno CLI foundation, storage layer (CRUD, search, fro
 
 ### 2. Templates as structured defaults, not rigid scaffolds
 
-**Choice**: Templates define a base file list and directory structure per project type. The agent customizes file contents and can add/remove files based on the clarified requirements.
+**Choice**: Templates define a base file list and directory structure per project type. The agent customizes file contents and can add/remove files based on the
+clarified requirements.
 
 **Alternatives considered**:
+
 - Cookiecutter-style templates with variable substitution: too rigid, doesn't adapt
 - No templates, always from scratch: slower, inconsistent structure
 
@@ -55,7 +62,8 @@ Changes 01–04 delivered: Deno CLI foundation, storage layer (CRUD, search, fro
 
 **Choice**: Every project gets a README.md with frontmatter (for DB indexing), "What it does", "How to run", "What you learned", and an ASCII structure tree.
 
-**Rationale**: The README serves dual purpose: human documentation AND machine-indexable metadata via frontmatter. "What you learned" reinforces the coaching aspect.
+**Rationale**: The README serves dual purpose: human documentation AND machine-indexable metadata via frontmatter. "What you learned" reinforces the coaching
+aspect.
 
 ## Risks / Trade-offs
 

@@ -3,7 +3,7 @@
  * Forward-only, versioned SQL migrations tracked in _migrations table.
  */
 
-import { Database } from "@db/sqlite";
+import { Database } from '@db/sqlite';
 
 interface Migration {
   version: number;
@@ -14,7 +14,7 @@ interface Migration {
 const MIGRATIONS: Migration[] = [
   {
     version: 1,
-    description: "Create sessions table",
+    description: 'Create sessions table',
     sql: `
       CREATE TABLE IF NOT EXISTS sessions (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -33,7 +33,7 @@ const MIGRATIONS: Migration[] = [
   },
   {
     version: 2,
-    description: "Create items table",
+    description: 'Create items table',
     sql: `
       CREATE TABLE IF NOT EXISTS items (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -52,7 +52,7 @@ const MIGRATIONS: Migration[] = [
   },
   {
     version: 3,
-    description: "Create profile table",
+    description: 'Create profile table',
     sql: `
       CREATE TABLE IF NOT EXISTS profile (
         key TEXT PRIMARY KEY,
@@ -62,7 +62,7 @@ const MIGRATIONS: Migration[] = [
   },
   {
     version: 4,
-    description: "Create FTS5 index on items",
+    description: 'Create FTS5 index on items',
     sql: `
       CREATE VIRTUAL TABLE IF NOT EXISTS items_fts USING fts5(
         title,
@@ -98,7 +98,7 @@ export function runMigrations(db: Database): void {
   `);
 
   // Get current version
-  const row = db.prepare("SELECT MAX(version) as v FROM _migrations").get() as
+  const row = db.prepare('SELECT MAX(version) as v FROM _migrations').get() as
     | { v: number | null }
     | undefined;
   const currentVersion = row?.v ?? 0;
@@ -106,16 +106,16 @@ export function runMigrations(db: Database): void {
   // Run pending migrations
   for (const migration of MIGRATIONS) {
     if (migration.version > currentVersion) {
-      db.exec("BEGIN");
+      db.exec('BEGIN');
       try {
         db.exec(migration.sql);
-        db.prepare("INSERT INTO _migrations (version, applied_at) VALUES (?, ?)").run(
+        db.prepare('INSERT INTO _migrations (version, applied_at) VALUES (?, ?)').run(
           migration.version,
           new Date().toISOString(),
         );
-        db.exec("COMMIT");
+        db.exec('COMMIT');
       } catch (e) {
-        db.exec("ROLLBACK");
+        db.exec('ROLLBACK');
         throw new Error(`Migration v${migration.version} (${migration.description}) failed: ${e}`);
       }
     }

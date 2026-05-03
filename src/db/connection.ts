@@ -2,12 +2,12 @@
  * SQLite database connection management.
  */
 
-import { Database } from "@db/sqlite";
-import { join } from "@std/path";
-import { getDataDir } from "../utils/xdg.ts";
-import { runMigrations } from "./migrations.ts";
+import { Database } from '@db/sqlite';
+import { join } from '@std/path';
+import { getDataDir } from '../utils/xdg.ts';
+import { runMigrations } from './migrations.ts';
 
-const DB_FILENAME = "coach.db";
+const DB_FILENAME = 'coach.db';
 
 let _db: Database | null = null;
 
@@ -22,7 +22,7 @@ export function getDb(dataDir?: string): Database {
   _db = new Database(dbPath);
 
   // Enable WAL mode for better concurrent access
-  _db.exec("PRAGMA journal_mode=WAL");
+  _db.exec('PRAGMA journal_mode=WAL');
 
   runMigrations(_db);
   return _db;

@@ -2,9 +2,10 @@
  * Search library items by text, type, language, tags, and combined filters.
  */
 
-import { Database } from "@db/sqlite";
-import type { ItemType } from "./library.ts";
+import { Database } from '@db/sqlite';
+import type { ItemType } from './library.ts';
 
+/** Composable filters accepted by {@link search}. */
 export interface SearchFilters {
   query?: string; // FTS5 full-text
   type?: ItemType; // snippet | tldr | project
@@ -13,6 +14,7 @@ export interface SearchFilters {
   limit?: number;
 }
 
+/** A single search hit returned by {@link search}. */
 export interface SearchResult {
   id: number;
   type: string;
@@ -35,26 +37,26 @@ export function search(db: Database, filters: SearchFilters): SearchResult[] {
   // FTS full-text search
   if (filters.query) {
     useFts = true;
-    conditions.push("items_fts MATCH ?");
+    conditions.push('items_fts MATCH ?');
     params.push(filters.query);
   }
 
   // Type filter
   if (filters.type) {
-    conditions.push("i.type = ?");
+    conditions.push('i.type = ?');
     params.push(filters.type);
   }
 
   // Language filter
   if (filters.lang) {
-    conditions.push("i.lang = ?");
+    conditions.push('i.lang = ?');
     params.push(filters.lang);
   }
 
   // Tag filter (match any)
   if (filters.tags && filters.tags.length > 0) {
-    const tagConditions = filters.tags.map(() => "i.tags LIKE ?");
-    conditions.push(`(${tagConditions.join(" OR ")})`);
+    const tagConditions = filters.tags.map(() => 'i.tags LIKE ?');
+    conditions.push(`(${tagConditions.join(' OR ')})`);
     for (const tag of filters.tags) {
       params.push(`%"${tag}"%`);
     }
@@ -72,13 +74,13 @@ export function search(db: Database, filters: SearchFilters): SearchResult[] {
   }
 
   if (conditions.length > 0) {
-    sql += ` WHERE ${conditions.join(" AND ")}`;
+    sql += ` WHERE ${conditions.join(' AND ')}`;
   }
 
-  sql += " ORDER BY i.created DESC";
+  sql += ' ORDER BY i.created DESC';
 
   if (filters.limit) {
-    sql += " LIMIT ?";
+    sql += ' LIMIT ?';
     params.push(filters.limit);
   }
 

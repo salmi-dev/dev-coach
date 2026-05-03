@@ -2,23 +2,23 @@
  * OS-aware clipboard integration.
  */
 
-import { getOS } from "./platform.ts";
+import { getOS } from './platform.ts';
 
-type ClipboardTool = "pbcopy" | "wl-copy" | "xclip" | "xsel" | "clip";
+type ClipboardTool = 'pbcopy' | 'wl-copy' | 'xclip' | 'xsel' | 'clip';
 
 /** Detect which clipboard tool is available. Returns null if none found. */
 export async function detectClipboardTool(): Promise<ClipboardTool | null> {
   const os = getOS();
 
-  if (os === "macos") {
-    if (await commandExists("pbcopy")) return "pbcopy";
-  } else if (os === "linux") {
+  if (os === 'macos') {
+    if (await commandExists('pbcopy')) return 'pbcopy';
+  } else if (os === 'linux') {
     // Wayland first, then X11
-    if (Deno.env.get("WAYLAND_DISPLAY") && await commandExists("wl-copy")) return "wl-copy";
-    if (await commandExists("xclip")) return "xclip";
-    if (await commandExists("xsel")) return "xsel";
-  } else if (os === "windows") {
-    return "clip"; // Always available on Windows
+    if (Deno.env.get('WAYLAND_DISPLAY') && await commandExists('wl-copy')) return 'wl-copy';
+    if (await commandExists('xclip')) return 'xclip';
+    if (await commandExists('xsel')) return 'xsel';
+  } else if (os === 'windows') {
+    return 'clip'; // Always available on Windows
   }
 
   return null;
@@ -32,28 +32,28 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   try {
     let cmd: string[];
     switch (tool) {
-      case "pbcopy":
-        cmd = ["pbcopy"];
+      case 'pbcopy':
+        cmd = ['pbcopy'];
         break;
-      case "wl-copy":
-        cmd = ["wl-copy"];
+      case 'wl-copy':
+        cmd = ['wl-copy'];
         break;
-      case "xclip":
-        cmd = ["xclip", "-selection", "clipboard"];
+      case 'xclip':
+        cmd = ['xclip', '-selection', 'clipboard'];
         break;
-      case "xsel":
-        cmd = ["xsel", "--clipboard", "--input"];
+      case 'xsel':
+        cmd = ['xsel', '--clipboard', '--input'];
         break;
-      case "clip":
-        cmd = ["clip"];
+      case 'clip':
+        cmd = ['clip'];
         break;
     }
 
     const process = new Deno.Command(cmd[0], {
       args: cmd.slice(1),
-      stdin: "piped",
-      stdout: "null",
-      stderr: "null",
+      stdin: 'piped',
+      stdout: 'null',
+      stderr: 'null',
     }).spawn();
 
     const writer = process.stdin.getWriter();
@@ -70,11 +70,11 @@ export async function copyToClipboard(text: string): Promise<boolean> {
 /** Check if a command exists on the system. */
 async function commandExists(cmd: string): Promise<boolean> {
   try {
-    const which = getOS() === "windows" ? "where" : "which";
+    const which = getOS() === 'windows' ? 'where' : 'which';
     const { success } = await new Deno.Command(which, {
       args: [cmd],
-      stdout: "null",
-      stderr: "null",
+      stdout: 'null',
+      stderr: 'null',
     }).output();
     return success;
   } catch {

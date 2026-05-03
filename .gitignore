@@ -44,6 +44,7 @@ coach-*
 tmp/
 .tmp/
 *.tmp
+cov_profile/
 
 # OS / misc
 Thumbs.db

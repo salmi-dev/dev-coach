@@ -4,7 +4,8 @@ description: Implement tasks from an OpenSpec change (Experimental)
 
 Implement tasks from an OpenSpec change.
 
-**Input**: Optionally specify a change name (e.g., `/opsx:apply add-auth`). If omitted, check if it can be inferred from conversation context. If vague or ambiguous you MUST prompt for available changes.
+**Input**: Optionally specify a change name (e.g., `/opsx:apply add-auth`). If omitted, check if it can be inferred from conversation context. If vague or
+ambiguous you MUST prompt for available changes.
 
 **Steps**
 
@@ -44,8 +45,7 @@ Implement tasks from an OpenSpec change.
 
 4. **Read context files**
 
-   Read the files listed in `contextFiles` from the apply instructions output.
-   The files depend on the schema being used:
+   Read the files listed in `contextFiles` from the apply instructions output. The files depend on the schema being used:
    - **spec-driven**: proposal, specs, design, tasks
    - Other schemas: follow the contextFiles from CLI output
 
@@ -132,6 +132,7 @@ What would you like to do?
 ```
 
 **Guardrails**
+
 - Keep going through tasks until done or blocked
 - Always read context files before starting (from the apply instructions output)
 - If task is ambiguous, pause and ask before implementing

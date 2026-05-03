@@ -2,11 +2,11 @@
  * DB index sync — keep `items` table in sync with filesystem.
  */
 
-import { Database } from "@db/sqlite";
-import { join, relative } from "@std/path";
-import { walk } from "@std/fs";
-import { parseFrontmatter } from "./frontmatter.ts";
-import type { ItemType } from "./library.ts";
+import { Database } from '@db/sqlite';
+import { join, relative } from '@std/path';
+import { walk } from '@std/fs';
+import { parseFrontmatter } from './frontmatter.ts';
+import type { ItemType } from './library.ts';
 
 /**
  * Upsert an item into the `items` table.
@@ -18,7 +18,7 @@ export function indexItem(
   relativePath: string,
   sessionId?: number,
 ): void {
-  const existing = db.prepare("SELECT id FROM items WHERE path = ?").get(relativePath) as
+  const existing = db.prepare('SELECT id FROM items WHERE path = ?').get(relativePath) as
     | { id: number }
     | undefined;
 
@@ -30,7 +30,7 @@ export function indexItem(
       `UPDATE items SET type=?, title=?, lang=?, tags=?, updated=? WHERE id=?`,
     ).run(
       type,
-      String(metadata.title ?? ""),
+      String(metadata.title ?? ''),
       metadata.lang ? String(metadata.lang) : null,
       tags,
       now,
@@ -42,7 +42,7 @@ export function indexItem(
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     ).run(
       type,
-      String(metadata.title ?? ""),
+      String(metadata.title ?? ''),
       relativePath,
       metadata.lang ? String(metadata.lang) : null,
       tags,
@@ -57,7 +57,7 @@ export function indexItem(
  * Remove an item from the `items` table by path.
  */
 export function removeIndex(db: Database, relativePath: string): void {
-  db.prepare("DELETE FROM items WHERE path = ?").run(relativePath);
+  db.prepare('DELETE FROM items WHERE path = ?').run(relativePath);
 }
 
 /**
@@ -66,11 +66,11 @@ export function removeIndex(db: Database, relativePath: string): void {
  */
 export async function rebuildIndex(db: Database, libraryPath: string): Promise<number> {
   // Clear existing items (triggers will clean FTS)
-  db.exec("DELETE FROM items");
+  db.exec('DELETE FROM items');
 
   let count = 0;
 
-  for (const dir of ["snippets", "tldr", "projects"]) {
+  for (const dir of ['snippets', 'tldr', 'projects']) {
     const dirPath = join(libraryPath, dir);
 
     try {
@@ -79,7 +79,7 @@ export async function rebuildIndex(db: Database, libraryPath: string): Promise<n
       continue; // Directory doesn't exist, skip
     }
 
-    for await (const entry of walk(dirPath, { exts: [".md"], includeDirs: false })) {
+    for await (const entry of walk(dirPath, { exts: ['.md'], includeDirs: false })) {
       try {
         const content = await Deno.readTextFile(entry.path);
         const { metadata } = parseFrontmatter(content);
@@ -102,13 +102,13 @@ export async function rebuildIndex(db: Database, libraryPath: string): Promise<n
 /** Infer item type from directory name. */
 function inferType(dir: string): ItemType {
   switch (dir) {
-    case "snippets":
-      return "snippet";
-    case "tldr":
-      return "tldr";
-    case "projects":
-      return "project";
+    case 'snippets':
+      return 'snippet';
+    case 'tldr':
+      return 'tldr';
+    case 'projects':
+      return 'project';
     default:
-      return "snippet";
+      return 'snippet';
   }
 }

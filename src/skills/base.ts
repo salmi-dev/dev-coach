@@ -2,19 +2,20 @@
  * Base skill interface and shared runner.
  */
 
-import { Database } from "@db/sqlite";
-import { CoachConfig } from "../config/schema.ts";
-import { search, type SearchFilters, type SearchResult } from "../storage/search.ts";
-import { logSession } from "../db/logger.ts";
-import { savePrompt } from "../storage/save-prompt.ts";
-import { copyToClipboard, detectClipboardTool } from "../utils/clipboard.ts";
-import { getDb, closeDb } from "../db/connection.ts";
-import { loadConfig } from "../config/config.ts";
-import { getLibraryPath } from "../utils/xdg.ts";
-import type { ItemType } from "../storage/library.ts";
+import { Database } from '@db/sqlite';
+import { CoachConfig } from '../config/schema.ts';
+import { search, type SearchFilters, type SearchResult } from '../storage/search.ts';
+import { logSession } from '../db/logger.ts';
+import { savePrompt } from '../storage/save-prompt.ts';
+import { copyToClipboard, detectClipboardTool } from '../utils/clipboard.ts';
+import { closeDb, getDb } from '../db/connection.ts';
+import { loadConfig } from '../config/config.ts';
+import { getLibraryPath } from '../utils/xdg.ts';
+import type { ItemType } from '../storage/library.ts';
 
 // ── Types ──────────────────────────────────────────────────────
 
+/** Shared runtime context handed to every skill. */
 export interface SessionContext {
   db: Database;
   config: CoachConfig;
@@ -22,6 +23,7 @@ export interface SessionContext {
   searchLibrary: (filters: SearchFilters) => SearchResult[];
 }
 
+/** Result returned by a skill's `run()` method. */
 export interface SkillResult {
   response: string;
   lang?: string;
@@ -30,6 +32,7 @@ export interface SkillResult {
   suggestedType?: ItemType;
 }
 
+/** A coach skill: id + display metadata + an async `run` entry point. */
 export interface Skill {
   id: string;
   icon: string;
@@ -39,6 +42,7 @@ export interface Skill {
 
 // ── Context Creation ───────────────────────────────────────────
 
+/** Build a session context (loads config, opens DB, exposes search helper). */
 export async function createContext(configPath?: string): Promise<SessionContext> {
   const config = await loadConfig(configPath);
   const db = getDb();
@@ -52,6 +56,7 @@ export async function createContext(configPath?: string): Promise<SessionContext
   };
 }
 
+/** Close the shared DB connection (call at the end of a CLI command). */
 export function destroyContext(): void {
   closeDb();
 }
@@ -61,6 +66,7 @@ export function destroyContext(): void {
 const CODE_BLOCK_REGEX = /```[\s\S]*?```/g;
 const SHELL_CMD_REGEX = /^\s*\$\s+.+/gm;
 
+/** Extract code blocks and `$ ...` shell lines from `text` (used for clipboard suggestions). */
 export function detectCommands(text: string): string[] {
   const commands: string[] = [];
 
@@ -68,7 +74,7 @@ export function detectCommands(text: string): string[] {
   const blocks = text.match(CODE_BLOCK_REGEX);
   if (blocks) {
     for (const block of blocks) {
-      const inner = block.replace(/^```\w*\n?/, "").replace(/\n?```$/, "").trim();
+      const inner = block.replace(/^```\w*\n?/, '').replace(/\n?```$/, '').trim();
       if (inner) commands.push(inner);
     }
   }
@@ -77,7 +83,7 @@ export function detectCommands(text: string): string[] {
   const shellLines = text.match(SHELL_CMD_REGEX);
   if (shellLines) {
     for (const line of shellLines) {
-      const cmd = line.replace(/^\s*\$\s+/, "").trim();
+      const cmd = line.replace(/^\s*\$\s+/, '').trim();
       if (cmd) commands.push(cmd);
     }
   }
@@ -85,12 +91,20 @@ export function detectCommands(text: string): string[] {
   return commands;
 }
 
+/** `true` when `text` contains at least one command-like block detected by {@link detectCommands}. */
 export function hasCommands(text: string): boolean {
   return detectCommands(text).length > 0;
 }
 
 // ── Skill Runner ───────────────────────────────────────────────
 
+/**
+ * Run a skill end-to-end: invoke `skill.run`, print response, optionally copy commands and prompt to save.
+ *
+ * @param skill The skill instance to run.
+ * @param input Free-form user input forwarded to the skill.
+ * @param context Shared session context.
+ */
 export async function runSkill(
   skill: Skill,
   input: string,
@@ -114,13 +128,13 @@ export async function runSkill(
     const clipTool = await detectClipboardTool();
     if (clipTool) {
       const buf = new Uint8Array(64);
-      Deno.stdout.writeSync(new TextEncoder().encode("📋 Copy command? [Y/n] "));
+      Deno.stdout.writeSync(new TextEncoder().encode('📋 Copy command? [Y/n] '));
       try {
         const n = Deno.stdin.readSync(buf);
-        const answer = n ? new TextDecoder().decode(buf.subarray(0, n)).trim() : "";
-        if (answer.toLowerCase() !== "n") {
+        const answer = n ? new TextDecoder().decode(buf.subarray(0, n)).trim() : '';
+        if (answer.toLowerCase() !== 'n') {
           const copied = await copyToClipboard(commands[0]);
-          if (copied) console.log("📋 Copied to clipboard!");
+          if (copied) console.log('📋 Copied to clipboard!');
         }
       } catch {
         // Non-interactive, skip

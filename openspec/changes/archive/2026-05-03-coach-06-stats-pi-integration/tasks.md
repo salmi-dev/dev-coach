@@ -1,6 +1,7 @@
 ## 1. Profile Builder
 
-- [x] 1.1 Create `src/db/profile.ts` — `rebuildProfile(db)` aggregating sessions into profile table (primary_languages, peak_hours, favorite_modes, recent_topics)
+- [x] 1.1 Create `src/db/profile.ts` — `rebuildProfile(db)` aggregating sessions into profile table (primary_languages, peak_hours, favorite_modes,
+      recent_topics)
 - [x] 1.2 Implement `calculateStreak(db)` — count consecutive days backward from today with sessions
 - [x] 1.3 Implement `monthOverMonthDelta(db)` — session count delta between current and previous month
 - [x] 1.4 Write tests for rebuildProfile (with data, empty), calculateStreak (active, broken, none), monthOverMonthDelta
@@ -9,7 +10,8 @@
 
 - [x] 2.1 Create `src/skills/stats.ts` — implement Skill interface with id="stats"
 - [x] 2.2 Implement ASCII bar chart renderer — block chars (████░░░) with percentage, fixed 15-char width, top 5 languages
-- [x] 2.3 Implement default monthly dashboard — ASCII box with: session count + delta, mode breakdown, language bars, library counts, streak, most active day, newest topic
+- [x] 2.3 Implement default monthly dashboard — ASCII box with: session count + delta, mode breakdown, language bars, library counts, streak, most active day,
+      newest topic
 - [x] 2.4 Implement empty state — "No sessions yet. Start with `coach ask`!" when DB is empty
 
 ## 3. Stats Subcommands
@@ -39,7 +41,8 @@
 ## 6. Pi Skill Definitions (finalize)
 
 - [x] 6.1 Create `src/pi/skills/coach-stats/SKILL.md` — describe subcommands, dashboard format, profile view
-- [x] 6.2 Review and finalize all 7 SKILL.md files for consistency (coach-ask, coach-explain, coach-compare, coach-sandbox, coach-review, coach-project, coach-stats)
+- [x] 6.2 Review and finalize all 7 SKILL.md files for consistency (coach-ask, coach-explain, coach-compare, coach-sandbox, coach-review, coach-project,
+      coach-stats)
 
 ## 7. CLI Router Integration
 

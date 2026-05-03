@@ -1,12 +1,16 @@
 ## Context
 
-Changes 01–05 built: Deno CLI foundation, storage layer, 3 simple skills (ask, explain, compare), 2 interactive skills (sandbox, review), and the project skill. All skills log sessions and save items. The database has `sessions`, `items`, `profile`, and `items_fts` tables. The stats stub exists in the CLI router. Pi skill SKILL.md files exist for skills from changes 03–05 but aren't installable as a package.
+Changes 01–05 built: Deno CLI foundation, storage layer, 3 simple skills (ask, explain, compare), 2 interactive skills (sandbox, review), and the project skill.
+All skills log sessions and save items. The database has `sessions`, `items`, `profile`, and `items_fts` tables. The stats stub exists in the CLI router. Pi
+skill SKILL.md files exist for skills from changes 03–05 but aren't installable as a package.
 
-This change completes the tool: stats dashboard to visualize progress, profile builder for cross-session intelligence, pi installer for agent integration, and a polished README for publishing.
+This change completes the tool: stats dashboard to visualize progress, profile builder for cross-session intelligence, pi installer for agent integration, and a
+polished README for publishing.
 
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Stats skill with rich ASCII dashboard (bar charts, streaks, breakdowns)
 - 5 stats subcommands: default monthly, weekly, per-language, topics, profile
 - Profile builder that infers user patterns from session history
@@ -15,6 +19,7 @@ This change completes the tool: stats dashboard to visualize progress, profile b
 - Publication-ready README and deno.json
 
 **Non-Goals:**
+
 - Web-based dashboard or GUI
 - Remote sync or cloud backup of stats
 - Auto-updating profile in background — rebuild on demand
@@ -27,6 +32,7 @@ This change completes the tool: stats dashboard to visualize progress, profile b
 **Choice**: Simple block-character bar charts (████░░░) with percentage labels. Fixed width (15 chars), top 5 languages shown.
 
 **Alternatives considered**:
+
 - Sparklines: too small to read
 - Full-width terminal bars: terminal width detection adds complexity
 - Just numbers: loses visual impact
@@ -41,13 +47,15 @@ This change completes the tool: stats dashboard to visualize progress, profile b
 
 ### 3. Profile builder — statistical aggregation
 
-**Choice**: Profile is rebuilt on demand (`coach stats profile` or `rebuildProfile()`). It aggregates `sessions` table to compute: top languages (by session count), peak hours (by hour-of-day distribution), favorite modes, and recent topic trends (most frequent tags in last 30 days).
+**Choice**: Profile is rebuilt on demand (`coach stats profile` or `rebuildProfile()`). It aggregates `sessions` table to compute: top languages (by session
+count), peak hours (by hour-of-day distribution), favorite modes, and recent topic trends (most frequent tags in last 30 days).
 
 **Rationale**: On-demand rebuild avoids complexity of triggers/watchers. The sessions table is small (personal tool), so aggregation is instant.
 
 ### 4. Pi installer — directory auto-detection
 
-**Choice**: `coach install-pi` checks for directories in order: `.pi/skills/`, `.codex/skills/`, `.github/skills/`. Uses the first one found. If none exist, creates `.pi/skills/`. User can override with `--dir <path>`.
+**Choice**: `coach install-pi` checks for directories in order: `.pi/skills/`, `.codex/skills/`, `.github/skills/`. Uses the first one found. If none exist,
+creates `.pi/skills/`. User can override with `--dir <path>`.
 
 **Rationale**: Supports all three agent config conventions. Auto-detect is convenient; override handles edge cases.
 

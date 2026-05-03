@@ -2,10 +2,11 @@
  * Save prompt flow — interactive save UX for skills.
  */
 
-import { Database } from "@db/sqlite";
-import { copyToClipboard, detectClipboardTool } from "../utils/clipboard.ts";
-import { saveItem, type ItemType, type SaveItemOptions } from "./library.ts";
+import { Database } from '@db/sqlite';
+import { copyToClipboard, detectClipboardTool } from '../utils/clipboard.ts';
+import { type ItemType, saveItem, type SaveItemOptions } from './library.ts';
 
+/** Outcome of an interactive {@link savePrompt} call. */
 export interface SavePromptResult {
   saved: boolean;
   path?: string;
@@ -31,7 +32,7 @@ export async function savePrompt(
 ): Promise<SavePromptResult> {
   // Ask to save
   const saveAnswer = await prompt(`💾 Save as ${type}? [Y/n] `);
-  if (saveAnswer?.toLowerCase() === "n") {
+  if (saveAnswer?.toLowerCase() === 'n') {
     return { saved: false };
   }
 
@@ -40,17 +41,15 @@ export async function savePrompt(
   const title = titleAnswer?.trim() || suggestedTitle;
 
   // Tags
-  const tagsStr = suggestedTags.join(", ");
+  const tagsStr = suggestedTags.join(', ');
   const tagsAnswer = await prompt(`Tags [${tagsStr}]: `);
-  const tags = tagsAnswer?.trim()
-    ? tagsAnswer.split(",").map((t) => t.trim()).filter((t) => t.length > 0)
-    : suggestedTags;
+  const tags = tagsAnswer?.trim() ? tagsAnswer.split(',').map((t) => t.trim()).filter((t) => t.length > 0) : suggestedTags;
 
   // Difficulty (snippets only)
-  let difficulty: "beginner" | "intermediate" | "advanced" | undefined;
-  if (type === "snippet") {
-    const diffAnswer = await prompt("Difficulty [1=beginner, 2=intermediate, 3=advanced]: ");
-    const diffMap = { "1": "beginner", "2": "intermediate", "3": "advanced" } as const;
+  let difficulty: 'beginner' | 'intermediate' | 'advanced' | undefined;
+  if (type === 'snippet') {
+    const diffAnswer = await prompt('Difficulty [1=beginner, 2=intermediate, 3=advanced]: ');
+    const diffMap = { '1': 'beginner', '2': 'intermediate', '3': 'advanced' } as const;
     difficulty = diffMap[diffAnswer?.trim() as keyof typeof diffMap];
   }
 
@@ -71,13 +70,13 @@ export async function savePrompt(
   let copied = false;
   const clipTool = await detectClipboardTool();
   if (clipTool) {
-    const copyAnswer = await prompt("📋 Copy to clipboard? [Y/n] ");
-    if (copyAnswer?.toLowerCase() !== "n") {
+    const copyAnswer = await prompt('📋 Copy to clipboard? [Y/n] ');
+    if (copyAnswer?.toLowerCase() !== 'n') {
       copied = await copyToClipboard(content);
       if (copied) {
-        console.log("📋 Copied to clipboard!");
+        console.log('📋 Copied to clipboard!');
       } else {
-        console.log("⚠️  Clipboard not available");
+        console.log('⚠️  Clipboard not available');
       }
     }
   }

@@ -2,23 +2,33 @@
  * coach init — Interactive first-run setup.
  */
 
-import { parseArgs } from "@std/cli/parse-args";
-import { join } from "@std/path";
-import { loadConfig, saveConfig, getConfigPath } from "../config/config.ts";
-import { getDb, closeDb } from "../db/connection.ts";
-import { getLibraryPath } from "../utils/xdg.ts";
-import { isInteractive } from "../utils/platform.ts";
-import { renderWelcomeBanner, renderBox } from "../utils/ascii.ts";
-import { CoachConfig, DEFAULT_CONFIG, VALID_RESPONSE_STYLES, ResponseStyle } from "../config/schema.ts";
+import { parseArgs } from '@std/cli/parse-args';
+import { join } from '@std/path';
+import { getConfigPath, saveConfig } from '../config/config.ts';
+import { closeDb, getDb } from '../db/connection.ts';
+import { getLibraryPath } from '../utils/xdg.ts';
+import { isInteractive } from '../utils/platform.ts';
+import { renderBox, renderWelcomeBanner } from '../utils/ascii.ts';
+import { CoachConfig, DEFAULT_CONFIG, ResponseStyle, VALID_RESPONSE_STYLES } from '../config/schema.ts';
 
 const COMMON_LANGUAGES = [
-  "typescript", "javascript", "rust", "python", "go",
-  "java", "shell", "c", "cpp", "ruby", "kotlin", "swift",
+  'typescript',
+  'javascript',
+  'rust',
+  'python',
+  'go',
+  'java',
+  'shell',
+  'c',
+  'cpp',
+  'ruby',
+  'kotlin',
+  'swift',
 ];
 
 /** Run the init command. */
 export async function runInit(args: string[], configOverride?: string): Promise<void> {
-  const parsed = parseArgs(args, { boolean: ["force"] });
+  const parsed = parseArgs(args, { boolean: ['force'] });
   const force = parsed.force;
 
   // Welcome banner
@@ -31,10 +41,10 @@ export async function runInit(args: string[], configOverride?: string): Promise<
     try {
       await Deno.stat(configPath);
       // Config exists
-      console.log("⚠️  Config already exists at:", configPath);
-      const answer = await prompt("Overwrite? [y/N] ");
-      if (answer?.toLowerCase() !== "y") {
-        console.log("Aborted.");
+      console.log('⚠️  Config already exists at:', configPath);
+      const answer = await prompt('Overwrite? [y/N] ');
+      if (answer?.toLowerCase() !== 'y') {
+        console.log('Aborted.');
         return;
       }
     } catch (e) {
@@ -57,13 +67,13 @@ export async function runInit(args: string[], configOverride?: string): Promise<
   console.log(`\n✅ Config written to ${configPath}`);
 
   // Create database (triggers migrations)
-  const db = getDb();
+  getDb();
   closeDb();
-  console.log("✅ Database created");
+  console.log('✅ Database created');
 
   // Scaffold library directories
   const libraryPath = getLibraryPath(config.library_path);
-  const dirs = ["snippets", "tldr", "projects"];
+  const dirs = ['snippets', 'tldr', 'projects'];
   for (const dir of dirs) {
     await Deno.mkdir(join(libraryPath, dir), { recursive: true });
   }
@@ -71,46 +81,94 @@ export async function runInit(args: string[], configOverride?: string): Promise<
 
   // Write initial README dashboard
   await writeInitialDashboard(libraryPath);
-  console.log("✅ Dashboard README created");
+  console.log('✅ Dashboard README created');
+
+  // Optional: install shell aliases.
+  const aliasesInstalled = await maybeInstallAliases();
 
   // Summary
   console.log();
   console.log(
-    renderBox("🎓 Setup Complete!", [
-      "",
+    renderBox('🎓 Setup Complete!', [
+      '',
       `  Config:   ${configPath}`,
       `  Library:  ${libraryPath}`,
-      "",
-      "  Try: coach ask \"how do I ...\"",
-      "",
+      ...(aliasesInstalled ? [`  Aliases:  c-tldr, c-snip installed (${aliasesInstalled})`] : []),
+      '',
+      '  Try: coach ask "how do I ..."',
+      '',
     ]),
   );
 }
 
+/**
+ * Decide whether the user accepted the alias install prompt.
+ *
+ * Pure function so it can be unit-tested without TTY/subprocess plumbing.
+ *
+ * @param answer Raw answer string from the prompt, or `null` when stdin returned EOF.
+ * @param interactive Whether the current session is interactive (TTY).
+ * @returns `true` when aliases should be installed, `false` otherwise.
+ */
+export function shouldInstallAliases(answer: string | null, interactive: boolean): boolean {
+  if (!interactive) return false;
+  if (answer === null) return false;
+  const trimmed = answer.trim().toLowerCase();
+  // Default (Enter) is yes; explicit 'n'/'no' is no.
+  if (trimmed === 'n' || trimmed === 'no') return false;
+  return true;
+}
+/**
+ * Optionally prompt the user to install shell aliases (`c-tldr`, `c-snip`).
+ *
+ * Skipped silently in non-interactive mode. Returns the rc path that was modified, or
+ * `null` when no install happened.
+ */
+async function maybeInstallAliases(): Promise<string | null> {
+  if (!isInteractive()) return null;
+
+  const answer = await prompt('\nInstall shell aliases (c-tldr, c-snip)? [Y/n] ');
+  if (!shouldInstallAliases(answer, true)) return null;
+
+  try {
+    const { installAliases, printSourceHint } = await import('../utils/shell-aliases.ts');
+    const res = await installAliases();
+    if (res.changed) {
+      console.log(`✅ Installed shell aliases in ${res.rcPath}`);
+      printSourceHint(res.rcPath);
+    } else {
+      console.log(`ℹ️  Shell aliases already up to date in ${res.rcPath}`);
+    }
+    return res.rcPath;
+  } catch (e) {
+    console.log(`⚠️  Skipped alias install: ${e instanceof Error ? e.message : String(e)}`);
+    return null;
+  }
+}
+
 /** Interactive prompts for setup. */
 async function interactiveSetup(): Promise<CoachConfig> {
-  console.log("Select your primary languages (comma-separated numbers):");
+  console.log('Select your primary languages (comma-separated numbers):');
   COMMON_LANGUAGES.forEach((lang, i) => console.log(`  ${i + 1}. ${lang}`));
   console.log(`  ${COMMON_LANGUAGES.length + 1}. Other (type manually)`);
 
-  const langInput = await prompt("\nLanguages [e.g., 1,2,6]: ");
-  const languages = parseLangSelection(langInput || "");
+  const langInput = await prompt('\nLanguages [e.g., 1,2,6]: ');
+  const languages = parseLangSelection(langInput || '');
 
-  const fwInput = await prompt("\nFrameworks/tools (comma-separated): ");
-  const frameworks = (fwInput || "")
-    .split(",")
+  const fwInput = await prompt('\nFrameworks/tools (comma-separated): ');
+  const frameworks = (fwInput || '')
+    .split(',')
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
 
-  console.log("\nResponse style:");
+  console.log('\nResponse style:');
   VALID_RESPONSE_STYLES.forEach((style, i) => console.log(`  ${i + 1}. ${style}`));
-  const styleInput = await prompt("\nStyle [1]: ");
-  const styleIdx = parseInt(styleInput || "1") - 1;
-  const responseStyle: ResponseStyle =
-    VALID_RESPONSE_STYLES[styleIdx] || "concise";
+  const styleInput = await prompt('\nStyle [1]: ');
+  const styleIdx = parseInt(styleInput || '1') - 1;
+  const responseStyle: ResponseStyle = VALID_RESPONSE_STYLES[styleIdx] || 'concise';
 
-  const libInput = await prompt("\nLibrary path [~/dev-coach]: ");
-  const libraryPath = libInput?.trim() || "~/dev-coach";
+  const libInput = await prompt('\nLibrary path [~/dev-coach]: ');
+  const libraryPath = libInput?.trim() || '~/dev-coach';
 
   return {
     library_path: libraryPath,
@@ -121,9 +179,22 @@ async function interactiveSetup(): Promise<CoachConfig> {
   };
 }
 
-/** Parse language selection from numbered input. */
-function parseLangSelection(input: string): string[] {
-  const parts = input.split(",").map((s) => s.trim()).filter((s) => s.length > 0);
+/**
+ * Parse a comma-separated language selection from the init prompt.
+ *
+ * Numbers are looked up in {@link COMMON_LANGUAGES}; non-numeric tokens are kept as manual
+ * language names (lower-cased). Out-of-range numbers are silently ignored.
+ *
+ * @param input Raw user input from the languages prompt.
+ * @returns Array of resolved language names (may be empty).
+ *
+ * @example
+ * ```ts
+ * parseLangSelection('1,2,go'); // ['typescript', 'javascript', 'go']
+ * ```
+ */
+export function parseLangSelection(input: string): string[] {
+  const parts = input.split(',').map((s) => s.trim()).filter((s) => s.length > 0);
   const languages: string[] = [];
 
   for (const part of parts) {
@@ -168,5 +239,5 @@ _No projects yet. Try \`coach project "idea"\` to build something!_
 ---
 _Generated by Dev Coach. Updated automatically._
 `;
-  await Deno.writeTextFile(join(libraryPath, "README.md"), readme);
+  await Deno.writeTextFile(join(libraryPath, 'README.md'), readme);
 }

@@ -1,12 +1,17 @@
 ## Context
 
-Changes 01 and 02 delivered the foundation: Deno CLI with config/DB/XDG paths, and a storage layer with CRUD, search, session logging, frontmatter, dashboard, and save prompts. The CLI router dispatches subcommands but all skill commands are stubs. This change implements the three simplest skills (ask, explain, compare) that follow a 1-question → 1-response pattern, establishing the skill architecture for future skills.
+Changes 01 and 02 delivered the foundation: Deno CLI with config/DB/XDG paths, and a storage layer with CRUD, search, session logging, frontmatter, dashboard,
+and save prompts. The CLI router dispatches subcommands but all skill commands are stubs. This change implements the three simplest skills (ask, explain,
+compare) that follow a 1-question → 1-response pattern, establishing the skill architecture for future skills.
 
-**Important**: These skills are CLI tools that *prepare* the user's input and *process* the response. The actual AI generation happens outside — the user runs `coach ask "question"` and the skill formats the prompt, then presents the response with save/copy options. In a pi agent context, the agent IS the AI — the skill definitions tell the agent how to structure its output.
+**Important**: These skills are CLI tools that _prepare_ the user's input and _process_ the response. The actual AI generation happens outside — the user runs
+`coach ask "question"` and the skill formats the prompt, then presents the response with save/copy options. In a pi agent context, the agent IS the AI — the
+skill definitions tell the agent how to structure its output.
 
 ## Goals / Non-Goals
 
 **Goals:**
+
 - Define a base skill interface that all 7 skills will implement
 - Implement ask, explain, compare with structured output formats
 - Integrate with storage layer (save prompt, session logging, search for cross-references)
@@ -14,6 +19,7 @@ Changes 01 and 02 delivered the foundation: Deno CLI with config/DB/XDG paths, a
 - Replace CLI stubs with real handlers
 
 **Non-Goals:**
+
 - Multi-turn conversation (that's changes 04–05)
 - Stats or dashboard skill (change 06)
 - Embedding an LLM — these skills are prompt templates + output processors
@@ -22,11 +28,14 @@ Changes 01 and 02 delivered the foundation: Deno CLI with config/DB/XDG paths, a
 
 ### 1. Skills as prompt formatters + output processors
 
-**Choice**: Each skill is a module that: (a) formats the user's input into a structured prompt, (b) prints the structured output, and (c) handles post-response actions (save, copy, log).
+**Choice**: Each skill is a module that: (a) formats the user's input into a structured prompt, (b) prints the structured output, and (c) handles post-response
+actions (save, copy, log).
 
-In CLI mode, the skill outputs a formatted prompt to stdout and reads the AI response from stdin (or the user just reads the formatted output and interacts). In pi agent mode, the SKILL.md tells the agent how to format its response.
+In CLI mode, the skill outputs a formatted prompt to stdout and reads the AI response from stdin (or the user just reads the formatted output and interacts). In
+pi agent mode, the SKILL.md tells the agent how to format its response.
 
-**Rationale**: This is a coaching tool, not an AI wrapper. The AI interaction happens at the agent level (pi) or via copy-paste. The skills provide structure and persistence.
+**Rationale**: This is a coaching tool, not an AI wrapper. The AI interaction happens at the agent level (pi) or via copy-paste. The skills provide structure
+and persistence.
 
 ### 2. SessionContext — shared context object
 
@@ -48,7 +57,8 @@ In CLI mode, the skill outputs a formatted prompt to stdout and reads the AI res
 
 ### 5. Pi skills as SKILL.md instruction files
 
-**Choice**: Each pi skill is a `SKILL.md` that tells the agent: what this skill does, expected input format, how to structure output, and what tools to use (coach-save, coach-copy, coach-log).
+**Choice**: Each pi skill is a `SKILL.md` that tells the agent: what this skill does, expected input format, how to structure output, and what tools to use
+(coach-save, coach-copy, coach-log).
 
 **Rationale**: Pi skills are prompt instructions, not code. The agent reads SKILL.md and follows the pattern.
 
