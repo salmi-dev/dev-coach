@@ -60,4 +60,4 @@
 - [x] 6.4 `bash scripts/test-bun.sh` — passes (≥ 80%).
 - [x] 6.5 `bash scripts/test-node.sh` — passes (≥ 80%).
 - [x] 6.6 `openspec validate --changes` — `lift-coverage-and-local-runtime-scripts` passes.
-- [ ] 6.7 Push branch, open PR, confirm all 9 CI checks green (Fmt, Lint, Build, Test, Test (Bun), Test (Node 22), Test (Node 24), Verify, CI Gate).
+- [x] 6.7 Push branch, open PR, confirm all 9 CI checks green (Fmt, Lint, Build, Test, Test (Bun), Test (Node 22), Test (Node 24), Verify, CI Gate).
