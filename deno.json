@@ -2,6 +2,7 @@
   "name": "@salmidev/dev-coach",
   "version": "0.2.0",
   "license": "MIT",
+  "description": "AI-powered coding coach: save snippets, TLDRs, and projects with SQLite-backed search.",
   "exports": {
     ".": "./mod.ts",
     "./cli": "./cli.ts"
@@ -29,7 +30,11 @@
       "deno.json",
       "README.md",
       "LICENSE"
-    ]
+    ],
+    "readmeSource": "jsdoc",
+    "runtimeCompat": {
+      "deno": true
+    }
   },
   "fmt": {
     "lineWidth": 160,
