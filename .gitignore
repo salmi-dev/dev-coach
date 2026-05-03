@@ -48,3 +48,6 @@ cov_profile/
 
 # OS / misc
 Thumbs.db
+
+# Local-only archive (kept under ~/dev-coach/_archive/)
+_archive/
