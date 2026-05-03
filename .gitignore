@@ -37,7 +37,7 @@ deno_dir/
 
 # Compiled binaries (built from `deno compile`)
 /coach
-coach-*
+/coach-*
 *.exe
 
 # Test / temp output
