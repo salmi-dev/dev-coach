@@ -1,3 +1,4 @@
+import './_db_warmup.ts';
 /**
  * Tests for pi custom tools (`coachSave`, `coachSearch`, `coachLog`, `coachCopy`).
  *
@@ -69,7 +70,7 @@ Deno.test('coachSearch: returns the saved item via FTS', async () => {
       tags: ['search'],
     });
     // Search by type only (no query) — ensures the row was indexed.
-    const hits = coachSearch({ type: 'tldr' });
+    const hits = await coachSearch({ type: 'tldr' });
     assertEquals(hits.length >= 1, true);
     assertStringIncludes(hits[0].title, 'Searchable');
   } finally {
@@ -80,7 +81,7 @@ Deno.test('coachSearch: returns the saved item via FTS', async () => {
 Deno.test('coachLog: appends a session row and returns its id', async () => {
   const env = await setupIsolatedEnv();
   try {
-    const res = coachLog({ mode: 'ask', lang: 'python', query: 'hi' });
+    const res = await coachLog({ mode: 'ask', lang: 'python', query: 'hi' });
     assertEquals(typeof res.sessionId, 'number');
     assertEquals(res.sessionId > 0, true);
   } finally {

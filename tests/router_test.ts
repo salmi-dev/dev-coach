@@ -1,3 +1,4 @@
+import './_db_warmup.ts';
 /**
  * In-process router tests — exercise each `case` arm of `route()` directly so that
  * `src/cli/router.ts` line coverage reflects every wired-up subcommand. Subprocess

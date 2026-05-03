@@ -16,8 +16,8 @@ import { search, type SearchFilters, type SearchResult } from '../../storage/sea
  * const hits = coachSearch({ type: 'tldr', query: 'json' });
  * ```
  */
-export function coachSearch(params: SearchFilters): SearchResult[] {
-  const db = getDb();
+export async function coachSearch(params: SearchFilters): Promise<SearchResult[]> {
+  const db = await getDb();
   try {
     return search(db, params);
   } finally {

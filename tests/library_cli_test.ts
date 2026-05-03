@@ -1,3 +1,4 @@
+import './_db_warmup.ts';
 /**
  * Smoke tests for library CLI handler — list, path, delete actions.
  *

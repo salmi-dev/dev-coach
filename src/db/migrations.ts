@@ -3,7 +3,7 @@
  * Forward-only, versioned SQL migrations tracked in _migrations table.
  */
 
-import { Database } from '@db/sqlite';
+import { type Database } from './sqlite/index.ts';
 
 interface Migration {
   version: number;

@@ -2,7 +2,7 @@
  * Search library items by text, type, language, tags, and combined filters.
  */
 
-import { Database } from '@db/sqlite';
+import { type Database } from '../db/sqlite/index.ts';
 import type { ItemType } from './library.ts';
 
 /** Composable filters accepted by {@link search}. */

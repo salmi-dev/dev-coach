@@ -11,15 +11,15 @@ import { logSession } from '../../db/logger.ts';
  * @param params Session metadata (mode, lang, tags, query, duration, saved path).
  * @returns `{ sessionId }` — the new row's primary key.
  */
-export function coachLog(params: {
+export async function coachLog(params: {
   mode: string;
   lang?: string;
   tags?: string[];
   query?: string;
   duration_s?: number;
   saved_as?: string;
-}): { sessionId: number } {
-  const db = getDb();
+}): Promise<{ sessionId: number }> {
+  const db = await getDb();
   try {
     const sessionId = logSession(db, params);
     return { sessionId };

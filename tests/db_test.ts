@@ -1,11 +1,12 @@
+import './_db_warmup.ts';
 import { assertEquals } from '@std/assert';
 import { closeDb, getDb } from '../src/db/connection.ts';
 import { getMigrations } from '../src/db/migrations.ts';
 
 const TEST_DIR = await Deno.makeTempDir({ prefix: 'coach-db-test-' });
 
-Deno.test('getDb creates database and runs migrations', () => {
-  const db = getDb(TEST_DIR);
+Deno.test('getDb creates database and runs migrations', async () => {
+  const db = await getDb(TEST_DIR);
 
   // Check _migrations table has all versions
   const rows = db.prepare('SELECT version FROM _migrations ORDER BY version').all() as {
@@ -18,8 +19,8 @@ Deno.test('getDb creates database and runs migrations', () => {
   closeDb();
 });
 
-Deno.test('sessions table exists and accepts inserts', () => {
-  const db = getDb(TEST_DIR);
+Deno.test('sessions table exists and accepts inserts', async () => {
+  const db = await getDb(TEST_DIR);
 
   db.prepare(
     'INSERT INTO sessions (ts, mode, lang, tags, query, duration_s) VALUES (?, ?, ?, ?, ?, ?)',
@@ -36,8 +37,8 @@ Deno.test('sessions table exists and accepts inserts', () => {
   closeDb();
 });
 
-Deno.test('items table exists and accepts inserts', () => {
-  const db = getDb(TEST_DIR);
+Deno.test('items table exists and accepts inserts', async () => {
+  const db = await getDb(TEST_DIR);
 
   db.prepare(
     'INSERT INTO items (type, title, path, lang, tags, created) VALUES (?, ?, ?, ?, ?, ?)',
@@ -53,8 +54,8 @@ Deno.test('items table exists and accepts inserts', () => {
   closeDb();
 });
 
-Deno.test('profile table stores key-value pairs', () => {
-  const db = getDb(TEST_DIR);
+Deno.test('profile table stores key-value pairs', async () => {
+  const db = await getDb(TEST_DIR);
 
   db.prepare('INSERT OR REPLACE INTO profile (key, value) VALUES (?, ?)').run(
     'primary_languages',
@@ -69,8 +70,8 @@ Deno.test('profile table stores key-value pairs', () => {
   closeDb();
 });
 
-Deno.test('FTS5 search finds matching items', () => {
-  const db = getDb(TEST_DIR);
+Deno.test('FTS5 search finds matching items', async () => {
+  const db = await getDb(TEST_DIR);
 
   // The item inserted in a previous test should be searchable
   const rows = db.prepare('SELECT * FROM items_fts WHERE items_fts MATCH ?').all('serde') as Record<
@@ -82,8 +83,8 @@ Deno.test('FTS5 search finds matching items', () => {
   closeDb();
 });
 
-Deno.test('FTS5 search returns empty for non-matching query', () => {
-  const db = getDb(TEST_DIR);
+Deno.test('FTS5 search returns empty for non-matching query', async () => {
+  const db = await getDb(TEST_DIR);
 
   const rows = db.prepare('SELECT * FROM items_fts WHERE items_fts MATCH ?').all('kubernetes') as Record<
     string,
@@ -94,14 +95,14 @@ Deno.test('FTS5 search returns empty for non-matching query', () => {
   closeDb();
 });
 
-Deno.test('migrations are idempotent (re-run does nothing)', () => {
-  const db = getDb(TEST_DIR);
+Deno.test('migrations are idempotent (re-run does nothing)', async () => {
+  const db = await getDb(TEST_DIR);
 
   const rows1 = db.prepare('SELECT COUNT(*) as c FROM _migrations').get() as { c: number };
   closeDb();
 
   // Re-open triggers migration check again
-  const db2 = getDb(TEST_DIR);
+  const db2 = await getDb(TEST_DIR);
   const rows2 = db2.prepare('SELECT COUNT(*) as c FROM _migrations').get() as { c: number };
   assertEquals(rows1.c, rows2.c);
 

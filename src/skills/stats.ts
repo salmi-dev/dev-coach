@@ -2,7 +2,7 @@
  * coach:stats — ASCII dashboard and stats views.
  */
 
-import { Database } from '@db/sqlite';
+import { type Database } from '../db/sqlite/index.ts';
 import { renderBox, SKILL_ICONS } from '../utils/ascii.ts';
 import { calculateStreak, getProfile, monthOverMonthDelta, rebuildProfile } from '../db/profile.ts';
 import { regenerateDashboard } from '../storage/dashboard.ts';

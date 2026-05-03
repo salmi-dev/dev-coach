@@ -2,7 +2,7 @@
  * Dashboard generator — regenerate library/README.md from DB data.
  */
 
-import { Database } from '@db/sqlite';
+import { type Database } from '../db/sqlite/index.ts';
 import { join } from '@std/path';
 import { runtime } from '../utils/runtime/index.ts';
 
