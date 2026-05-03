@@ -244,8 +244,11 @@ We target a **100% JSR score** for the package; current breakdown is visible at 
 
 1. `deno fmt --check` — enforces 160-col / single-quote / semicolon style.
 2. `deno lint` — zero errors required.
-3. `deno test --coverage=cov_profile` — full test suite with coverage instrumentation.
-4. `scripts/check-coverage.ts` — fails when overall **line coverage of `src/` falls below 80%**.
+3. `deno task coverage:report` — full test suite with coverage instrumentation (writes `cov_profile/`).
+4. `deno task coverage:check` — fails when overall **line coverage of `src/` falls below 80%**.
+
+Steps 3 and 4 are also exposed as standalone tasks so CI can run the test pass once and check the threshold separately (see `.github/workflows/pipeline.yml`)
+without a second `deno test` invocation. Locally, `deno task verify` chains them.
 
 The threshold lives in `scripts/check-coverage.ts` as a single constant (`THRESHOLD = 80`). Update it there and nowhere else. Every OpenSpec change's `tasks.md`
 ends with a `deno task verify` step so regressions can't slip in silently.

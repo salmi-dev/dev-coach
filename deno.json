@@ -12,7 +12,9 @@
     "build": "deno compile --allow-read --allow-write --allow-env --allow-run --allow-ffi --output=coach cli.ts",
     "install": "deno install -g --allow-read --allow-write --allow-env --allow-run --allow-ffi --name=coach --config=deno.json cli.ts",
     "test": "deno test --allow-read --allow-write --allow-env --allow-run --allow-ffi --allow-net tests/",
-    "verify": "deno fmt --check && deno lint && rm -rf cov_profile && deno test --coverage=cov_profile --allow-read --allow-write --allow-env --allow-run --allow-ffi --allow-net tests/ && deno run --allow-read --allow-run scripts/check-coverage.ts cov_profile"
+    "coverage:report": "rm -rf cov_profile && deno test --coverage=cov_profile --allow-read --allow-write --allow-env --allow-run --allow-ffi --allow-net tests/",
+    "coverage:check": "deno run --allow-read --allow-run scripts/check-coverage.ts cov_profile",
+    "verify": "deno fmt --check && deno lint && deno task coverage:report && deno task coverage:check"
   },
   "imports": {
     "@db/sqlite": "jsr:@db/sqlite@0.12",

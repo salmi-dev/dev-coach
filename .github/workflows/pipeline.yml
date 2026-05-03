@@ -172,13 +172,13 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - name: Run tests
+      - name: Run tests with coverage
         id: test
         run: |
           set -o pipefail
           LOG="${RUNNER_TEMP:-/tmp}/test.out"
           CLEAN="${RUNNER_TEMP:-/tmp}/test.clean"
-          if deno task test 2>&1 | tee "$LOG"; then
+          if deno task coverage:report 2>&1 | tee "$LOG"; then
             # Strip ANSI before parsing so regexes don't have to deal with escape codes.
             sed 's/\x1b\[[0-9;]*[A-Za-z]//g' "$LOG" > "$CLEAN"
             # deno test summary line: "ok | N passed | M failed (Xs)"
@@ -187,13 +187,15 @@ jobs:
             failed=$(echo "$summary" | grep -oE '[0-9]+ failed' | head -1 | grep -oE '[0-9]+' || echo '0')
             duration=$(echo "$summary" | grep -oE '\([0-9]+m?s\)' | tr -d '()' || echo '?')
             {
-              echo '### ✅ Tests passed'
+              echo '### ✅ Tests passed (with coverage)'
               echo ''
               echo '| Metric | Value |'
               echo '| --- | --- |'
               echo "| Passed   | $passed |"
               echo "| Failed   | $failed |"
               echo "| Duration | $duration |"
+              echo ''
+              echo 'Coverage profile uploaded as artifact `deno-cov-profile` for the `verify` job to consume.'
             } >> "$GITHUB_STEP_SUMMARY"
           else
             sed 's/\x1b\[[0-9;]*[A-Za-z]//g' "$LOG" > "$CLEAN" || true
@@ -214,6 +216,13 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
+      - name: Upload coverage profile
+        uses: actions/upload-artifact@v7
+        with:
+          name: deno-cov-profile
+          path: cov_profile
+          if-no-files-found: error
+          retention-days: 1
 
   test-bun:
     name: Test (Bun)
@@ -227,8 +236,22 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - name: Run cross-runtime suite on Bun
-        run: bun test tests/cross-runtime/
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Run cross-runtime suite on Bun (with coverage)
+        run: bun test --coverage --coverage-reporter=lcov tests/cross-runtime/
+      - name: Coverage threshold (cross-runtime preset)
+        run: |
+          set -o pipefail
+          LCOV='coverage/lcov.info'
+          if [ ! -f "$LCOV" ]; then
+            echo "::error::Bun lcov file not found at $LCOV"
+            ls -la coverage/ || true
+            exit 1
+          fi
+          deno run --allow-read --allow-run scripts/check-coverage.ts \
+            --lcov "$LCOV" --profile cross-runtime --threshold 60
       - name: Summary
         if: always()
         run: |
@@ -236,6 +259,7 @@ jobs:
             echo '### 🥢 Bun cross-runtime tests'
             echo ''
             echo "Bun: $(bun --version)"
+            echo "Lcov: coverage/lcov.info"
             echo ''
             echo "Result: ${{ job.status }}"
           } >> "$GITHUB_STEP_SUMMARY"
@@ -265,18 +289,38 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
       - name: Install better-sqlite3 (Node 22 fallback path)
         if: matrix.install-better-sqlite3 == 'true'
         run: npm install --no-save --no-package-lock better-sqlite3
-      - name: Run cross-runtime suite on Node
+      - name: Run cross-runtime suite on Node (with coverage)
         run: |
           # Node 22 needs --experimental-strip-types to load .ts files;
-          # Node 24 strips types by default.
+          # Node 24 strips types by default. --experimental-test-coverage is
+          # still the flag name on both Node 22 and Node 24.
           # node --test does not recursively discover from a bare directory
           # path — pass explicit file paths via shell glob.
+          mkdir -p coverage
           shopt -s nullglob
           files=(tests/cross-runtime/*.test.ts)
-          node ${{ matrix.ts-flag }} --test "${files[@]}"
+          node ${{ matrix.ts-flag }} \
+            --experimental-test-coverage \
+            --test-reporter=lcov --test-reporter-destination=coverage/node-lcov.info \
+            --test-reporter=spec --test-reporter-destination=stdout \
+            --test "${files[@]}"
+      - name: Coverage threshold (cross-runtime preset)
+        run: |
+          set -o pipefail
+          LCOV='coverage/node-lcov.info'
+          if [ ! -f "$LCOV" ]; then
+            echo "::error::Node lcov file not found at $LCOV"
+            ls -la coverage/ || true
+            exit 1
+          fi
+          deno run --allow-read --allow-run scripts/check-coverage.ts \
+            --lcov "$LCOV" --profile cross-runtime --threshold 60
       - name: Summary
         if: always()
         run: |
@@ -285,10 +329,10 @@ jobs:
             echo ''
             echo "Node: $(node --version)"
             echo "Driver: ${{ matrix.install-better-sqlite3 == 'true' && 'better-sqlite3 (fallback path)' || 'node:sqlite (built-in)' }}"
+            echo "Lcov: coverage/node-lcov.info"
             echo ''
             echo "Result: ${{ job.status }}"
           } >> "$GITHUB_STEP_SUMMARY"
-
   verify:
     name: Verify
     runs-on: ubuntu-latest
@@ -298,35 +342,25 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - name: Verify (fmt + lint + coverage)
+      - name: Download coverage profile
+        uses: actions/download-artifact@v8
+        with:
+          name: deno-cov-profile
+          path: cov_profile
+      - name: Coverage threshold check
         id: verify
         run: |
           set -o pipefail
           LOG="${RUNNER_TEMP:-/tmp}/verify.out"
           CLEAN="${RUNNER_TEMP:-/tmp}/verify.clean"
-          if deno task verify 2>&1 | tee "$LOG"; then
+          if deno task coverage:check 2>&1 | tee "$LOG"; then
             sed 's/\x1b\[[0-9;]*[A-Za-z]//g' "$LOG" > "$CLEAN"
             cov_line=$(grep -E "^(✅|❌) Coverage" "$CLEAN" | tail -1 || echo '')
-            all_files=$(grep -E "All files" "$CLEAN" | tail -1 || echo '')
-            branch=$(echo "$all_files" | awk -F'|' '{print $3}' | tr -d ' ' || echo '?')
-            func=$(echo "$all_files"   | awk -F'|' '{print $4}' | tr -d ' ' || echo '?')
-            line=$(echo "$all_files"   | awk -F'|' '{print $5}' | tr -d ' ' || echo '?')
             {
               echo '### ✅ Verify passed'
               echo ''
               if [ -n "$cov_line" ]; then echo "$cov_line"; echo ''; fi
-              echo '| Coverage | Value |'
-              echo '| --- | --- |'
-              echo "| Line     | ${line:-?}% |"
-              echo "| Branch   | ${branch:-?}% |"
-              echo "| Function | ${func:-?}% |"
-              echo ''
-              echo '<details><summary>Per-file coverage table</summary>'
-              echo ''
-              echo '```'
-              grep -E '^\| ' "$CLEAN" | head -200 || true
-              echo '```'
-              echo '</details>'
+              echo 'Consumed `deno-cov-profile` artifact produced by the `test` job. No second `deno test` pass.'
             } >> "$GITHUB_STEP_SUMMARY"
           else
             sed 's/\x1b\[[0-9;]*[A-Za-z]//g' "$LOG" > "$CLEAN" || true
@@ -386,6 +420,8 @@ jobs:
             echo "| Test (Bun)   | $(icon "$test_bun_r") $test_bun_r _(non-blocking)_ |"
             echo "| Test (Node)  | $(icon "$test_node_r") $test_node_r _(non-blocking)_ |"
             echo "| Verify       | $(icon "$verify_r") $verify_r |"
+            echo ''
+            echo 'Coverage gates: Deno (≥0.80) is enforced by `Verify`; cross-runtime (≥0.60 on `src/utils/runtime/**`, `src/db/sqlite/**`, `src/utils/prompt.ts`) is enforced inside `Test (Bun)` and `Test (Node)`.'
           } >> "$GITHUB_STEP_SUMMARY"
 
           # test-bun and test-node are non-blocking until we've proven them
