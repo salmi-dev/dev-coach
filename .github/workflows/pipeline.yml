@@ -1,4 +1,4 @@
-name: CI · fmt → lint → build → test → verify → publish
+name: CI
 
 # NOTE: GitHub Actions expressions don't support string slicing, so we cannot
 # trim the SHA to 7 chars at the run-name level. The UI displays the full hash;
