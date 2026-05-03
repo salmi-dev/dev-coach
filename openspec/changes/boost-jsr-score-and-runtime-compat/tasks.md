@@ -55,10 +55,10 @@
 
 ## 5. SQLite adapter — Bun and Node implementations
 
-- [ ] 5.1 Create `src/db/sqlite/bun.ts` wrapping `bun:sqlite` to match the interface
-- [ ] 5.2 Create `src/db/sqlite/node.ts` trying `node:sqlite` first, falling back to `better-sqlite3` with a clear error if both fail
-- [ ] 5.3 Wire `openDb` factory to dynamic-import the right impl based on `runtime.name`
-- [ ] 5.4 Add a parameterised test runner so the SQLite test from 4.4 runs unchanged on whichever runtime executes it
+- [x] 5.1 Create `src/db/sqlite/bun.ts` wrapping `bun:sqlite` to match the interface
+- [x] 5.2 Create `src/db/sqlite/node.ts` trying `node:sqlite` first, falling back to `better-sqlite3` with a clear error if both fail
+- [x] 5.3 Wire `openDb` factory to dynamic-import the right impl based on `runtime.name` (already done as part of Group 4 §4.1)
+- [x] 5.4 Add a parameterised test runner so the SQLite test from 4.4 runs unchanged on whichever runtime executes it
 
 ## 6. Cut over — replace direct calls
 
