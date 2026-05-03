@@ -29,8 +29,9 @@ it impossible to reuse the threshold check in CI without re-running the tests.
 - Unifying the _test runners_. Deno keeps `deno test`; Bun keeps `bun test`; Node keeps `node --test`. Only the coverage _check_ is unified.
 - Raising the global threshold above the current 80 %. Threshold values stay where they are; this change is about instrumentation and pipeline shape.
 - Touching the macOS / Windows release builds — those don't run in `pipeline.yml`.
-- Flipping `continue-on-error: false` on the Bun / Node jobs. That's task 7.6 of the previous change and is governed by "5 consecutive green main builds", not
-  by adding coverage. We keep them non-blocking until that gate is met.
+- ~~Flipping `continue-on-error: false` on the Bun / Node jobs.~~ **Now in scope.** Originally task 7.6 of `boost-jsr-score-and-runtime-compat` deferred this
+  until “5 consecutive green main builds”. Adding coverage gates in this change provides an additional regression signal that justifies flipping
+  `continue-on-error` to `false` in the same PR. Cross-runtime jobs are now blocking.
 
 ## Decisions
 

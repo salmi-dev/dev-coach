@@ -115,7 +115,8 @@ is only published when a maintainer cuts a release.
 
 The CI workflow (`.github/workflows/pipeline.yml`) SHALL include two additional jobs, `test-bun` and `test-node`, that run a curated subset of `tests/**`
 exercising the library surface on Bun and Node respectively. Both jobs SHALL depend on `fmt` and `lint`, and SHALL feed into `ci-gate` so failures block merges
-to `main` once they are flipped from non-blocking to blocking (see runtime-compat task 7.6).
+to `main`. As of this change the cross-runtime jobs are **blocking** — the previous “non-blocking until 5 green main builds” gate from runtime-compat task 7.6
+is lifted in this same change because the new coverage gate provides an additional layer of protection that justifies the flip.
 
 The `test-node` job SHALL run on a matrix of supported Node versions (at minimum Node 22 and Node 24).
 
@@ -123,7 +124,7 @@ Both jobs SHALL collect line-coverage data while running the cross-runtime suite
 `cross-runtime` preset to enforce a minimum **60% line coverage** on the modules the cross-runtime suite is meant to exercise (the runtime adapter under
 `src/utils/runtime/**`, the SQLite adapter under `src/db/sqlite/**`, and `src/utils/prompt.ts`). The 60% floor is a **regression gate**, deliberately set below
 today's measured baselines (Bun ≈ 66%, Node ≈ 83%) so the suite can be expanded incrementally without forcing test additions in any single change. The coverage
-gate SHALL fail the job when the threshold is not met, regardless of whether the test job is currently configured as blocking in `ci-gate`.
+gate SHALL fail the job when the threshold is not met, and because the test jobs are blocking in `ci-gate`, the workflow as a whole SHALL fail.
 
 The Deno-binary integration tests (CLI subprocess tests under `tests/`) SHALL remain Deno-only and run in the existing `test` job.
 
@@ -137,7 +138,7 @@ The Deno-binary integration tests (CLI subprocess tests under `tests/`) SHALL re
 #### Scenario: Cross-runtime test failure blocks the gate
 
 - **WHEN** the `test-bun` job fails (test failure or coverage below threshold)
-- **THEN** once the gate is configured as blocking, the `ci-gate` job SHALL exit non-zero
+- **THEN** the `ci-gate` job SHALL exit non-zero
 - **AND** the failure SHALL appear in the per-job result table emitted to `$GITHUB_STEP_SUMMARY`
 
 #### Scenario: Cross-runtime coverage below threshold fails the job
