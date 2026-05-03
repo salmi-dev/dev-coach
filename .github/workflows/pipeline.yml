@@ -59,21 +59,23 @@ jobs:
         id: lint
         run: |
           set -o pipefail
-          if deno lint 2>&1 | tee lint.out; then
-            sed 's/\x1b\[[0-9;]*[A-Za-z]//g' lint.out > lint.clean
-            footer=$(tail -1 lint.clean || echo '')
+          LOG="${RUNNER_TEMP:-/tmp}/lint.out"
+          CLEAN="${RUNNER_TEMP:-/tmp}/lint.clean"
+          if deno lint 2>&1 | tee "$LOG"; then
+            sed 's/\x1b\[[0-9;]*[A-Za-z]//g' "$LOG" > "$CLEAN"
+            footer=$(tail -1 "$CLEAN" || echo '')
             {
               echo '### ✅ Lint clean'
               echo ''
               echo "$footer"
             } >> "$GITHUB_STEP_SUMMARY"
           else
-            sed 's/\x1b\[[0-9;]*[A-Za-z]//g' lint.out > lint.clean || true
+            sed 's/\x1b\[[0-9;]*[A-Za-z]//g' "$LOG" > "$CLEAN" || true
             {
               echo '### ❌ Lint failed'
               echo ''
               echo '```'
-              cat lint.clean
+              cat "$CLEAN"
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
@@ -96,7 +98,9 @@ jobs:
         id: build
         run: |
           set -o pipefail
-          if deno task build 2>&1 | tee build.out; then
+          LOG="${RUNNER_TEMP:-/tmp}/build.out"
+          CLEAN="${RUNNER_TEMP:-/tmp}/build.clean"
+          if deno task build 2>&1 | tee "$LOG"; then
             size='?'
             sha=''
             if [ -f coach ]; then
@@ -117,12 +121,12 @@ jobs:
               echo "| Deno      | $deno_ver |"
             } >> "$GITHUB_STEP_SUMMARY"
           else
-            sed 's/\x1b\[[0-9;]*[A-Za-z]//g' build.out > build.clean || true
+            sed 's/\x1b\[[0-9;]*[A-Za-z]//g' "$LOG" > "$CLEAN" || true
             {
               echo '### ❌ Build failed'
               echo ''
               echo '```'
-              tail -50 build.clean
+              tail -50 "$CLEAN"
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
@@ -169,11 +173,13 @@ jobs:
         id: test
         run: |
           set -o pipefail
-          if deno task test 2>&1 | tee test.out; then
+          LOG="${RUNNER_TEMP:-/tmp}/test.out"
+          CLEAN="${RUNNER_TEMP:-/tmp}/test.clean"
+          if deno task test 2>&1 | tee "$LOG"; then
             # Strip ANSI before parsing so regexes don't have to deal with escape codes.
-            sed 's/\x1b\[[0-9;]*[A-Za-z]//g' test.out > test.clean
+            sed 's/\x1b\[[0-9;]*[A-Za-z]//g' "$LOG" > "$CLEAN"
             # deno test summary line: "ok | N passed | M failed (Xs)"
-            summary=$(grep -E "^(ok|FAILED) \|" test.clean | tail -1 || true)
+            summary=$(grep -E "^(ok|FAILED) \|" "$CLEAN" | tail -1 || true)
             passed=$(echo "$summary" | grep -oE '[0-9]+ passed' | head -1 | grep -oE '[0-9]+' || echo '?')
             failed=$(echo "$summary" | grep -oE '[0-9]+ failed' | head -1 | grep -oE '[0-9]+' || echo '0')
             duration=$(echo "$summary" | grep -oE '\([0-9]+m?s\)' | tr -d '()' || echo '?')
@@ -187,8 +193,8 @@ jobs:
               echo "| Duration | $duration |"
             } >> "$GITHUB_STEP_SUMMARY"
           else
-            sed 's/\x1b\[[0-9;]*[A-Za-z]//g' test.out > test.clean || true
-            failures=$(grep -E "FAILED|=> \./tests/" test.clean | head -30 || true)
+            sed 's/\x1b\[[0-9;]*[A-Za-z]//g' "$LOG" > "$CLEAN" || true
+            failures=$(grep -E "FAILED|=> \./tests/" "$CLEAN" | head -30 || true)
             {
               echo '### ❌ Tests failed'
               echo ''
@@ -199,7 +205,7 @@ jobs:
               echo '<details><summary>Last 80 lines of output</summary>'
               echo ''
               echo '```'
-              tail -80 test.clean
+              tail -80 "$CLEAN"
               echo '```'
               echo '</details>'
             } >> "$GITHUB_STEP_SUMMARY"
@@ -219,10 +225,12 @@ jobs:
         id: verify
         run: |
           set -o pipefail
-          if deno task verify 2>&1 | tee verify.out; then
-            sed 's/\x1b\[[0-9;]*[A-Za-z]//g' verify.out > verify.clean
-            cov_line=$(grep -E "^(✅|❌) Coverage" verify.clean | tail -1 || echo '')
-            all_files=$(grep -E "All files" verify.clean | tail -1 || echo '')
+          LOG="${RUNNER_TEMP:-/tmp}/verify.out"
+          CLEAN="${RUNNER_TEMP:-/tmp}/verify.clean"
+          if deno task verify 2>&1 | tee "$LOG"; then
+            sed 's/\x1b\[[0-9;]*[A-Za-z]//g' "$LOG" > "$CLEAN"
+            cov_line=$(grep -E "^(✅|❌) Coverage" "$CLEAN" | tail -1 || echo '')
+            all_files=$(grep -E "All files" "$CLEAN" | tail -1 || echo '')
             branch=$(echo "$all_files" | awk -F'|' '{print $3}' | tr -d ' ' || echo '?')
             func=$(echo "$all_files"   | awk -F'|' '{print $4}' | tr -d ' ' || echo '?')
             line=$(echo "$all_files"   | awk -F'|' '{print $5}' | tr -d ' ' || echo '?')
@@ -239,13 +247,13 @@ jobs:
               echo '<details><summary>Per-file coverage table</summary>'
               echo ''
               echo '```'
-              grep -E '^\| ' verify.clean | head -200 || true
+              grep -E '^\| ' "$CLEAN" | head -200 || true
               echo '```'
               echo '</details>'
             } >> "$GITHUB_STEP_SUMMARY"
           else
-            sed 's/\x1b\[[0-9;]*[A-Za-z]//g' verify.out > verify.clean || true
-            cov_line=$(grep -E "Coverage" verify.clean | tail -3 || true)
+            sed 's/\x1b\[[0-9;]*[A-Za-z]//g' "$LOG" > "$CLEAN" || true
+            cov_line=$(grep -E "Coverage" "$CLEAN" | tail -3 || true)
             {
               echo '### ❌ Verify failed'
               echo ''
@@ -258,7 +266,7 @@ jobs:
               echo '<details><summary>Last 100 lines of output</summary>'
               echo ''
               echo '```'
-              tail -100 verify.clean
+              tail -100 "$CLEAN"
               echo '```'
               echo '</details>'
             } >> "$GITHUB_STEP_SUMMARY"
@@ -326,9 +334,14 @@ jobs:
         id: publish
         run: |
           set -o pipefail
-          if deno publish 2>&1 | tee publish.out; then
-            sed 's/\x1b\[[0-9;]*[A-Za-z]//g' publish.out > publish.clean
-            version=$(grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' publish.clean | head -1 || echo 'see logs')
+          # Logs MUST be written outside the working tree — `deno publish`
+          # rejects any untracked file inside the package root with
+          # "Aborting due to uncommitted changes". Use $RUNNER_TEMP.
+          LOG="${RUNNER_TEMP:-/tmp}/publish.out"
+          CLEAN="${RUNNER_TEMP:-/tmp}/publish.clean"
+          if deno publish 2>&1 | tee "$LOG"; then
+            sed 's/\x1b\[[0-9;]*[A-Za-z]//g' "$LOG" > "$CLEAN"
+            version=$(grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' "$CLEAN" | head -1 || echo 'see logs')
             {
               echo '### 🚀 Published to JSR'
               echo ''
@@ -353,12 +366,12 @@ jobs:
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
           else
-            sed 's/\x1b\[[0-9;]*[A-Za-z]//g' publish.out > publish.clean || true
+            sed 's/\x1b\[[0-9;]*[A-Za-z]//g' "$LOG" > "$CLEAN" || true
             {
               echo '### ❌ Publish failed'
               echo ''
               echo '```'
-              tail -60 publish.clean
+              tail -60 "$CLEAN"
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
