@@ -83,11 +83,10 @@
 
 ## 8. JSR runtime-compat flip
 
-- [ ] 8.1 PATCH `runtimeCompat` on JSR via `curl PATCH https://api.jsr.io/scopes/salmidev/packages/dev-coach` to
-      `{ "deno": true, "bun": true, "node": true, "browser": false, "workerd": false }` (server-side; not a `deno.json` field — see D7)
-- [ ] 8.2 Update README "Supported runtimes" section with the matrix and Node version requirements (≥22 with `node:sqlite`, or any Node with `better-sqlite3`
+- [ ] 8.1 PATCH `runtimeCompat` on JSR via `scripts/configure-jsr-package.sh` (already updated to flip the bun + node flags) — needs `JSR_TOKEN` so user runs it
+- [x] 8.2 Update README "Supported runtimes" section with the matrix and Node version requirements (≥22 with `node:sqlite`, or any Node with `better-sqlite3`
       installed)
-- [ ] 8.3 Run `deno task verify`
+- [x] 8.3 Run `deno task verify`
 - [ ] 8.4 Cut a MINOR release via Release workflow (this is a feature: cross-runtime support)
 - [ ] 8.5 Verify on JSR: score = 100%, "Works with" badges show Deno + Bun + Node, browsers + Workers shown as not compatible
 
