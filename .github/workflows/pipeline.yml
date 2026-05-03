@@ -215,6 +215,76 @@ jobs:
             exit 1
           fi
 
+  test-bun:
+    name: Test (Bun)
+    runs-on: ubuntu-latest
+    needs: [fmt, lint]
+    # Initially non-blocking — flip to false once we've had ≥ 5 consecutive
+    # green runs on main (task 7.6 of boost-jsr-score-and-runtime-compat).
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Run cross-runtime suite on Bun
+        run: bun test tests/cross-runtime/
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo '### 🥢 Bun cross-runtime tests'
+            echo ''
+            echo "Bun: $(bun --version)"
+            echo ''
+            echo "Result: ${{ job.status }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  test-node:
+    name: Test (Node ${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    needs: [fmt, lint]
+    continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        node-version: ['22', '24']
+        include:
+          # Node 22: node:sqlite is gated behind --experimental-sqlite. We
+          # don't pass that flag here so the import fails and the adapter
+          # falls back to better-sqlite3 — exercising the fallback path.
+          - node-version: '22'
+            install-better-sqlite3: 'true'
+            ts-flag: '--experimental-strip-types'
+          # Node 24: node:sqlite is stable and TS stripping is the default.
+          - node-version: '24'
+            install-better-sqlite3: 'false'
+            ts-flag: ''
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Install better-sqlite3 (Node 22 fallback path)
+        if: matrix.install-better-sqlite3 == 'true'
+        run: npm install --no-save --no-package-lock better-sqlite3
+      - name: Run cross-runtime suite on Node
+        run: |
+          # Node 22 needs --experimental-strip-types to load .ts files;
+          # Node 24 strips types by default.
+          node ${{ matrix.ts-flag }} --test tests/cross-runtime/
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### 🟢 Node ${{ matrix.node-version }} cross-runtime tests"
+            echo ''
+            echo "Node: $(node --version)"
+            echo "Driver: ${{ matrix.install-better-sqlite3 == 'true' && 'better-sqlite3 (fallback path)' || 'node:sqlite (built-in)' }}"
+            echo ''
+            echo "Result: ${{ job.status }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
   verify:
     name: Verify
     runs-on: ubuntu-latest
@@ -280,7 +350,7 @@ jobs:
     name: CI Gate
     runs-on: ubuntu-latest
     if: always()
-    needs: [fmt, lint, build, test, verify]
+    needs: [fmt, lint, build, test, test-bun, test-node, verify]
     steps:
       - name: Check all jobs passed
         run: |
@@ -288,6 +358,8 @@ jobs:
           lint_r='${{ needs.lint.result }}'
           build_r='${{ needs.build.result }}'
           test_r='${{ needs.test.result }}'
+          test_bun_r='${{ needs.test-bun.result }}'
+          test_node_r='${{ needs.test-node.result }}'
           verify_r='${{ needs.verify.result }}'
           icon() {
             case "$1" in
@@ -303,19 +375,35 @@ jobs:
             echo ''
             echo '| Job | Result |'
             echo '| --- | --- |'
-            echo "| Fmt    | $(icon "$fmt_r") $fmt_r |"
-            echo "| Lint   | $(icon "$lint_r") $lint_r |"
-            echo "| Build  | $(icon "$build_r") $build_r |"
-            echo "| Test   | $(icon "$test_r") $test_r |"
-            echo "| Verify | $(icon "$verify_r") $verify_r |"
+            echo "| Fmt          | $(icon "$fmt_r") $fmt_r |"
+            echo "| Lint         | $(icon "$lint_r") $lint_r |"
+            echo "| Build        | $(icon "$build_r") $build_r |"
+            echo "| Test (Deno)  | $(icon "$test_r") $test_r |"
+            echo "| Test (Bun)   | $(icon "$test_bun_r") $test_bun_r _(non-blocking)_ |"
+            echo "| Test (Node)  | $(icon "$test_node_r") $test_node_r _(non-blocking)_ |"
+            echo "| Verify       | $(icon "$verify_r") $verify_r |"
           } >> "$GITHUB_STEP_SUMMARY"
 
-          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" || "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+          # test-bun and test-node are non-blocking until we've proven them
+          # stable on main (task 7.6 of boost-jsr-score-and-runtime-compat).
+          # Only the original five jobs gate the workflow.
+          blocking_failed='false'
+          for r in "$fmt_r" "$lint_r" "$build_r" "$test_r" "$verify_r"; do
+            if [[ "$r" == 'failure' || "$r" == 'cancelled' ]]; then
+              blocking_failed='true'
+            fi
+          done
+
+          if [[ "$blocking_failed" == 'true' ]]; then
             echo '' >> "$GITHUB_STEP_SUMMARY"
-            echo '**❌ One or more CI jobs failed or were cancelled.**' >> "$GITHUB_STEP_SUMMARY"
-            echo "One or more CI jobs failed or were cancelled"
+            echo '**❌ One or more blocking CI jobs failed or were cancelled.**' >> "$GITHUB_STEP_SUMMARY"
+            echo "One or more blocking CI jobs failed or were cancelled"
             exit 1
           fi
           echo '' >> "$GITHUB_STEP_SUMMARY"
-          echo '**✅ All CI jobs passed.**' >> "$GITHUB_STEP_SUMMARY"
-          echo "All CI jobs passed"
+          if [[ "$test_bun_r" != 'success' || "$test_node_r" != 'success' ]]; then
+            echo '**⚠️  All blocking jobs passed; cross-runtime jobs reported a non-success status (currently non-blocking).**' >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo '**✅ All CI jobs passed.**' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "All blocking CI jobs passed"

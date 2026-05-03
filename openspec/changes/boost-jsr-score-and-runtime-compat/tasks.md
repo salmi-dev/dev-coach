@@ -72,13 +72,13 @@
 
 ## 7. CI matrix — verify cross-runtime claims
 
-- [ ] 7.1 Add `test-bun` job to `pipeline.yml` using `oven-sh/setup-bun@v2`; runs `bun test tests/<cross-runtime-subset>` on `ubuntu-latest`
-- [ ] 7.2 Add `test-node` job to `pipeline.yml` using `actions/setup-node@v4` with a `node-version` matrix of `[22, 24]`; runs
-      `node --test tests/<cross-runtime-subset>`
-- [ ] 7.3 Initially set `continue-on-error: true` on both new jobs so a transient hiccup doesn't block Deno releases
-- [ ] 7.4 Add both jobs to `ci-gate.needs` with appropriate result handling
-- [ ] 7.5 Curate the cross-runtime test subset (a `tests/cross-runtime/` dir or a tagged glob) — must include the SQLite adapter tests and the runtime adapter
-      tests
+- [x] 7.1 Add `test-bun` job to `pipeline.yml` using `oven-sh/setup-bun@v2`; runs `bun test tests/<cross-runtime-subset>` on `ubuntu-latest`
+- [x] 7.2 Add `test-node` job to `pipeline.yml` using `actions/setup-node@v4` with a `node-version` matrix of `[22, 24]`; runs
+      `node --test tests/<cross-runtime-subset>` (Node 22 exercises the better-sqlite3 fallback path; Node 24 uses built-in `node:sqlite`)
+- [x] 7.3 Initially set `continue-on-error: true` on both new jobs so a transient hiccup doesn't block Deno releases
+- [x] 7.4 Add both jobs to `ci-gate.needs` with appropriate result handling (displayed but non-blocking until 7.6)
+- [x] 7.5 Curate the cross-runtime test subset (`tests/cross-runtime/`) — includes the SQLite adapter tests (`db_sqlite.test.ts`) and the runtime adapter
+      smoke tests (`runtime.test.ts`)
 - [ ] 7.6 Once green for ≥ 5 consecutive `main` builds, flip `continue-on-error: false`
 
 ## 8. JSR runtime-compat flip
