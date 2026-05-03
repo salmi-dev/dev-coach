@@ -22,10 +22,11 @@
 - [x] 1.6 Update README's Development section: mention the JSR score target, link to the package page, and note that the JSR landing page is sourced from
       `mod.ts` JSDoc (so contributors editing `mod.ts` are editing the JSR overview)
 - [x] 1.7 Run `deno fmt`, `deno lint`, `deno task verify`
-- [ ] 1.8 Cut a release (PATCH bump via Release workflow); on JSR confirm:
-  - [ ] 1.8.1 Score moved from 82% to ≥ 94%
-  - [ ] 1.8.2 The overview tab shows the rewritten `mod.ts` content with rendered code blocks
-  - [ ] 1.8.3 “Has a description”, “Has module docs in all entrypoints”, and “At least one runtime is marked as compatible” are all green
+- [x] 1.8 Cut a release (PATCH bump via Release workflow); on JSR confirm:
+  - [x] 1.8.1 Score moved from 82% to **100%** (Track A blew past its 94% target — `multipleRuntimesCompatible` is not scored, so Deno-only already hits the
+        cap)
+  - [x] 1.8.2 The overview tab shows the rewritten `mod.ts` content with rendered code blocks
+  - [x] 1.8.3 “Has a description”, “Has module docs in all entrypoints”, and “At least one runtime is marked as compatible” are all green
 
 ## 2. Runtime adapter — surface and Deno implementation
 
