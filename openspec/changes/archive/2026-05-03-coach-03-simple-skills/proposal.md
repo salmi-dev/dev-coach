@@ -1,6 +1,8 @@
 ## Why
 
-The CLI foundation (change 01) and storage layer (change 02) are complete, but all skill commands are stubs. Users can `coach init` and the DB/library are ready, but `coach ask`, `coach explain`, and `coach compare` just print "not yet implemented." These three skills share the simplest interaction pattern (1 question → 1 response) and will establish the skill architecture that all future skills build on.
+The CLI foundation (change 01) and storage layer (change 02) are complete, but all skill commands are stubs. Users can `coach init` and the DB/library are
+ready, but `coach ask`, `coach explain`, and `coach compare` just print "not yet implemented." These three skills share the simplest interaction pattern (1
+question → 1 response) and will establish the skill architecture that all future skills build on.
 
 ## What Changes
 
@@ -26,6 +28,7 @@ The CLI foundation (change 01) and storage layer (change 02) are complete, but a
 
 ## Impact
 
-- **New files**: `src/skills/base.ts`, `src/skills/ask.ts`, `src/skills/explain.ts`, `src/skills/compare.ts`, `src/pi/skills/coach-{ask,explain,compare}/SKILL.md`
+- **New files**: `src/skills/base.ts`, `src/skills/ask.ts`, `src/skills/explain.ts`, `src/skills/compare.ts`,
+  `src/pi/skills/coach-{ask,explain,compare}/SKILL.md`
 - **Modified files**: `src/cli/router.ts` (replace stubs with real handlers)
 - **Dependencies**: Uses storage layer (save prompt, search, session logger) from change 02

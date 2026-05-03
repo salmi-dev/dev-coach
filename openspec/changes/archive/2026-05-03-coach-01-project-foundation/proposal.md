@@ -1,6 +1,8 @@
 ## Why
 
-Dev Coach has no codebase yet — it's a concept described in a README. To build an AI-powered coaching CLI with 7 skills (ask, explain, compare, sandbox, review, project, stats), we need a solid foundation: a Deno project with configuration management, database, XDG-compliant paths, and core utilities. This is change 01 of 06 — everything else depends on it.
+Dev Coach has no codebase yet — it's a concept described in a README. To build an AI-powered coaching CLI with 7 skills (ask, explain, compare, sandbox, review,
+project, stats), we need a solid foundation: a Deno project with configuration management, database, XDG-compliant paths, and core utilities. This is change 01
+of 06 — everything else depends on it.
 
 ## What Changes
 

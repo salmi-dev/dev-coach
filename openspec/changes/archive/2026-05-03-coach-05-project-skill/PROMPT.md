@@ -1,16 +1,19 @@
 # Coach 05 — Project Skill
 
 ## What
+
 Implement `coach:project`, the most complex skill — multi-turn conversation that produces a complete mini-project scaffold.
 
 ## Scope
 
 ### `coach:project` (`src/skills/project.ts`)
+
 ```
- ⚙  coach:project
+⚙  coach:project
 ```
 
 #### Phase 1 — Requirements Gathering (n questions)
+
 - **Input**: Initial project idea (e.g., "CLI that converts CSV to JSON")
 - **Clarification loop**:
   - Agent asks targeted questions to scope the project
@@ -21,6 +24,7 @@ Implement `coach:project`, the most complex skill — multi-turn conversation th
 - **Output of phase 1**: internal project brief (not saved, used by phase 2)
 
 #### Phase 2 — Project Plan
+
 - Agent presents:
   - Project name (slug)
   - File structure tree (ASCII art)
@@ -30,6 +34,7 @@ Implement `coach:project`, the most complex skill — multi-turn conversation th
 - User confirms or adjusts: "looks good" / "add tests" / "use X instead of Y"
 
 #### Phase 3 — Implementation
+
 - Creates project directory: `{library}/projects/{name}/`
 - Generates files one by one:
   - `README.md` — purpose, how to run, what you learn, tech used
@@ -40,6 +45,7 @@ Implement `coach:project`, the most complex skill — multi-turn conversation th
 - Progress indicator: "Creating file 3/7: src/parser.ts"
 
 #### Phase 4 — Wrap-up
+
 - Summary of what was created
 - "Run it with: `deno task start` (or equivalent)"
 - Auto-registers project in DB (`items` table, type=project)
@@ -47,6 +53,7 @@ Implement `coach:project`, the most complex skill — multi-turn conversation th
 - Session logged with full duration
 
 ### Project Templates (`src/skills/project-templates.ts`)
+
 - Predefined templates for common project types:
   - **cli** — Deno/Node CLI app skeleton
   - **api** — REST API skeleton
@@ -56,6 +63,7 @@ Implement `coach:project`, the most complex skill — multi-turn conversation th
 - User can skip templates: "from scratch"
 
 ### Project README Format
+
 ```markdown
 ---
 title: CSV to JSON Converter
@@ -70,43 +78,38 @@ lang: typescript
 > Built with Dev Coach 🎓
 
 ## What it does
+
 Converts CSV files to JSON with support for...
 
 ## How to run
-\`\`\`bash
-deno task start input.csv
-\`\`\`
+
+\`\`\`bash deno task start input.csv \`\`\`
 
 ## What you learned
+
 - File I/O in Deno
 - Streaming parsers
 - CLI argument handling
 
 ## Structure
-\`\`\`
-csv-to-json/
-├── README.md
-├── deno.json
-├── main.ts
-├── src/
-│   ├── parser.ts
-│   └── formatter.ts
-└── tests/
-    └── parser_test.ts
-\`\`\`
+
+\`\`\` csv-to-json/ ├── README.md ├── deno.json ├── main.ts ├── src/ │ ├── parser.ts │ └── formatter.ts └── tests/ └── parser_test.ts \`\`\`
 ```
 
 ### Pi Skill Definition
+
 - `src/pi/skills/coach-project/SKILL.md`
 - Multi-turn: agent manages the conversation phases
 - Uses `coach-save` tool to write files
 
 ## Dependencies
+
 - Requires: `coach-01-project-foundation`
 - Requires: `coach-02-storage-layer`
 - Requires: `coach-03-simple-skills` (base skill interface)
 
 ## Acceptance
+
 - `coach project "csv to json converter"` → clarification → plan → implementation
 - Produces runnable project in `~/dev-coach/projects/csv-to-json/`
 - `deno task start` (or equivalent) actually works in generated project

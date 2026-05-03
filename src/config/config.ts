@@ -2,13 +2,13 @@
  * Config loading, saving, and validation.
  */
 
-import { parse as parseYaml, stringify as stringifyYaml } from "@std/yaml";
-import { dirname } from "@std/path";
-import { join } from "@std/path";
-import { getConfigDir } from "../utils/xdg.ts";
-import { CoachConfig, DEFAULT_CONFIG, validateConfigFields } from "./schema.ts";
+import { parse as parseYaml, stringify as stringifyYaml } from '@std/yaml';
+import { dirname } from '@std/path';
+import { join } from '@std/path';
+import { getConfigDir } from '../utils/xdg.ts';
+import { CoachConfig, DEFAULT_CONFIG, validateConfigFields } from './schema.ts';
 
-const CONFIG_FILENAME = "config.yaml";
+const CONFIG_FILENAME = 'config.yaml';
 
 /** Get the full path to the config file. */
 export function getConfigPath(overridePath?: string): string {
@@ -24,7 +24,7 @@ export async function loadConfig(overridePath?: string): Promise<CoachConfig> {
     const content = await Deno.readTextFile(path);
     const parsed = parseYaml(content) as Partial<CoachConfig> | null;
 
-    if (!parsed || typeof parsed !== "object") {
+    if (!parsed || typeof parsed !== 'object') {
       return { ...DEFAULT_CONFIG };
     }
 

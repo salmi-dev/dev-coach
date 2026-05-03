@@ -30,14 +30,14 @@ Step-by-step line highlighting with click:
 
 ```ts {1-2|4-6|8|all} {lines:true}
 // Define a generic Result type
-type Result<T, E = Error> = { ok: true; value: T } | { ok: false; error: E }
+type Result<T, E = Error> = { ok: true; value: T } | { ok: false; error: E };
 
 function divide(a: number, b: number): Result<number, string> {
-  if (b === 0) return { ok: false, error: 'Division by zero' }
-  return { ok: true, value: a / b }
+  if (b === 0) return { ok: false, error: 'Division by zero' };
+  return { ok: true, value: a / b };
 }
 
-const result = divide(10, 3)
+const result = divide(10, 3);
 ```
 
 ---
@@ -71,6 +71,7 @@ layoutClass: gap-8
 This layout splits content into **two columns**.
 
 Perfect for:
+
 - 📝 Explaining code
 - 🔄 Showing before/after
 - 📊 Comparing approaches
@@ -83,13 +84,11 @@ Perfect for:
 // Reactive state management
 const state = reactive({
   count: 0,
-  doubled: computed(() =>
-    state.count * 2
-  ),
-})
+  doubled: computed(() => state.count * 2),
+});
 
 function increment() {
-  state.count++
+  state.count++;
 }
 ```
 
@@ -293,15 +292,15 @@ timeline
 
 Simple and clean:
 
-| Feature | Status | Priority | Owner |
-|---------|--------|----------|-------|
-| Authentication | ✅ Done | 🔴 High | @alice |
-| REST API | ✅ Done | 🔴 High | @bob |
-| WebSocket | 🔄 WIP | 🟡 Medium | @charlie |
-| Dashboard UI | 🔄 WIP | 🟡 Medium | @alice |
-| Mobile App | ❌ Todo | 🟢 Low | @bob |
-| CI/CD Pipeline | ✅ Done | 🔴 High | @charlie |
-| Documentation | 🔄 WIP | 🟡 Medium | @alice |
+| Feature        | Status  | Priority  | Owner    |
+| -------------- | ------- | --------- | -------- |
+| Authentication | ✅ Done | 🔴 High   | @alice   |
+| REST API       | ✅ Done | 🔴 High   | @bob     |
+| WebSocket      | 🔄 WIP  | 🟡 Medium | @charlie |
+| Dashboard UI   | 🔄 WIP  | 🟡 Medium | @alice   |
+| Mobile App     | ❌ Todo | 🟢 Low    | @bob     |
+| CI/CD Pipeline | ✅ Done | 🔴 High   | @charlie |
+| Documentation  | 🔄 WIP  | 🟡 Medium | @alice   |
 
 ---
 
@@ -454,28 +453,28 @@ graph TD
 ```ts {lines:true}
 const rateLimit = (
   max: number,
-  windowMs: number
+  windowMs: number,
 ) => {
-  const hits = new Map<string, number[]>()
+  const hits = new Map<string, number[]>();
 
   return (req: Request) => {
     const ip = req.headers
-      .get('x-forwarded-for') ?? 'unknown'
-    const now = Date.now()
+      .get('x-forwarded-for') ?? 'unknown';
+    const now = Date.now();
     const window = hits.get(ip)
-      ?.filter(t => t > now - windowMs)
-      ?? []
+      ?.filter((t) => t > now - windowMs) ??
+      [];
 
     if (window.length >= max) {
       return new Response(
         'Too Many Requests',
-        { status: 429 }
-      )
+        { status: 429 },
+      );
     }
 
-    hits.set(ip, [...window, now])
-  }
-}
+    hits.set(ip, [...window, now]);
+  };
+};
 ```
 
 ---

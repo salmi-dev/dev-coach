@@ -2,13 +2,16 @@
  * Project templates for common project types.
  */
 
-export type ProjectType = "cli" | "api" | "script" | "library";
+/** Supported project archetypes for {@link projectSkill}. */
+export type ProjectType = 'cli' | 'api' | 'script' | 'library';
 
+/** A single file in a project template (path relative to the project root). */
 export interface ProjectFile {
   path: string;
   description: string;
 }
 
+/** Template describing a project's directory tree and file list. */
 export interface ProjectTemplate {
   type: ProjectType;
   files: ProjectFile[];
@@ -17,44 +20,44 @@ export interface ProjectTemplate {
 
 const TEMPLATES: Record<ProjectType, ProjectTemplate> = {
   cli: {
-    type: "cli",
+    type: 'cli',
     files: [
-      { path: "deno.json", description: "Deno config with start task" },
-      { path: "main.ts", description: "CLI entry point with arg parsing" },
-      { path: "src/core.ts", description: "Core logic module" },
-      { path: ".gitignore", description: "Git ignore file" },
+      { path: 'deno.json', description: 'Deno config with start task' },
+      { path: 'main.ts', description: 'CLI entry point with arg parsing' },
+      { path: 'src/core.ts', description: 'Core logic module' },
+      { path: '.gitignore', description: 'Git ignore file' },
     ],
-    dirs: ["src"],
+    dirs: ['src'],
   },
   api: {
-    type: "api",
+    type: 'api',
     files: [
-      { path: "deno.json", description: "Deno config with start task" },
-      { path: "main.ts", description: "Server entry point" },
-      { path: "src/routes.ts", description: "Route definitions" },
-      { path: "src/handlers.ts", description: "Request handlers" },
-      { path: ".gitignore", description: "Git ignore file" },
+      { path: 'deno.json', description: 'Deno config with start task' },
+      { path: 'main.ts', description: 'Server entry point' },
+      { path: 'src/routes.ts', description: 'Route definitions' },
+      { path: 'src/handlers.ts', description: 'Request handlers' },
+      { path: '.gitignore', description: 'Git ignore file' },
     ],
-    dirs: ["src"],
+    dirs: ['src'],
   },
   script: {
-    type: "script",
+    type: 'script',
     files: [
-      { path: "main.ts", description: "Script entry point" },
-      { path: "deno.json", description: "Deno config (optional)" },
+      { path: 'main.ts', description: 'Script entry point' },
+      { path: 'deno.json', description: 'Deno config (optional)' },
     ],
     dirs: [],
   },
   library: {
-    type: "library",
+    type: 'library',
     files: [
-      { path: "deno.json", description: "Deno config with publish settings" },
-      { path: "mod.ts", description: "Library entry point" },
-      { path: "src/lib.ts", description: "Main library code" },
-      { path: "tests/lib_test.ts", description: "Tests" },
-      { path: ".gitignore", description: "Git ignore file" },
+      { path: 'deno.json', description: 'Deno config with publish settings' },
+      { path: 'mod.ts', description: 'Library entry point' },
+      { path: 'src/lib.ts', description: 'Main library code' },
+      { path: 'tests/lib_test.ts', description: 'Tests' },
+      { path: '.gitignore', description: 'Git ignore file' },
     ],
-    dirs: ["src", "tests"],
+    dirs: ['src', 'tests'],
   },
 };
 
@@ -71,16 +74,16 @@ export function getTemplateTypes(): ProjectType[] {
 // ── Type Detection ─────────────────────────────────────────────
 
 const TYPE_KEYWORDS: Record<ProjectType, string[]> = {
-  cli: ["cli", "command", "tool", "terminal", "argparse", "flags"],
-  api: ["api", "server", "rest", "http", "endpoint", "route", "graphql"],
-  script: ["script", "utility", "convert", "transform", "parse", "generate", "simple"],
-  library: ["library", "package", "module", "sdk", "crate", "publish"],
+  cli: ['cli', 'command', 'tool', 'terminal', 'argparse', 'flags'],
+  api: ['api', 'server', 'rest', 'http', 'endpoint', 'route', 'graphql'],
+  script: ['script', 'utility', 'convert', 'transform', 'parse', 'generate', 'simple'],
+  library: ['library', 'package', 'module', 'sdk', 'crate', 'publish'],
 };
 
 /** Detect project type from description. */
 export function detectProjectType(description: string): ProjectType {
   const lower = description.toLowerCase();
-  let bestType: ProjectType = "script"; // default
+  let bestType: ProjectType = 'script'; // default
   let bestScore = 0;
 
   for (const [type, keywords] of Object.entries(TYPE_KEYWORDS) as Array<[ProjectType, string[]]>) {

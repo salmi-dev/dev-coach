@@ -2,8 +2,9 @@
  * Session logger — record skill interactions to the sessions table.
  */
 
-import { Database } from "@db/sqlite";
+import { Database } from '@db/sqlite';
 
+/** Parameters accepted by {@link logSession}. */
 export interface LogSessionParams {
   mode: string;
   lang?: string;
@@ -33,6 +34,6 @@ export function logSession(db: Database, params: LogSessionParams): number {
   );
 
   // Get the last inserted row ID
-  const row = db.prepare("SELECT last_insert_rowid() as id").get() as { id: number };
+  const row = db.prepare('SELECT last_insert_rowid() as id').get() as { id: number };
   return row.id;
 }

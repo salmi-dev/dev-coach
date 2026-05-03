@@ -1,20 +1,42 @@
 schema: spec-driven
 
-# Project context (optional)
-# This is shown to AI when creating artifacts.
-# Add your tech stack, conventions, style guides, domain knowledge, etc.
-# Example:
-#   context: |
-#     Tech stack: TypeScript, React, Node.js
-#     We use conventional commits
-#     Domain: e-commerce platform
+# Project context — shown to AI when creating artifacts.
+context: |
+  Tech stack: Deno + TypeScript, SQLite (@db/sqlite), YAML frontmatter (@std/yaml).
+  Entry points: cli.ts (CLI), mod.ts (library exports). Source under src/, tests under tests/.
+  Domain: AI-powered coding coach — saves snippets, TLDRs, and projects to ~/dev-coach/ and indexes them in SQLite.
 
-# Per-artifact rules (optional)
-# Add custom rules for specific artifacts.
-# Example:
-#   rules:
-#     proposal:
-#       - Keep proposals under 500 words
-#       - Always include a "Non-goals" section
-#     tasks:
-#       - Break tasks into chunks of max 2 hours
+  Code style (enforced by `deno fmt` + project convention):
+    - Semicolons: REQUIRED at end of statements.
+    - Strings: single quotes ' by default; double quotes only when the string contains a single quote or for JSX-style attributes.
+    - Line width: 160 columns max.
+    - Indent: 2 spaces.
+    - Imports: use JSR/`@std/*` aliases declared in deno.json — no bare URL imports in src/.
+
+  Documentation:
+    - JSDoc is REQUIRED on every exported symbol (functions, classes, types, interfaces, constants).
+    - JSDoc MUST include a one-line summary; @param and @returns are required when the signature is non-trivial.
+    - Use @example blocks for non-obvious public APIs.
+    - Internal (non-exported) helpers SHOULD have a brief one-line comment when their purpose isn't self-evident.
+
+  Testing:
+    - Tests live under tests/ mirroring src/ structure.
+    - Use @std/assert; one Deno.test per behaviour.
+
+# Per-artifact rules
+rules:
+  proposal:
+    - Keep proposals concise (1-2 pages); focus on why, not how.
+    - Always populate the Capabilities section with kebab-case names.
+  design:
+    - Only required for cross-cutting changes, new dependencies, or non-trivial trade-offs.
+    - Include alternatives considered for each major decision.
+  specs:
+    - Every requirement MUST have at least one scenario using exactly 4 hashtags (####).
+    - Use SHALL/MUST; avoid should/may.
+  tasks:
+    - Each task MUST be a checkbox `- [ ] X.Y ...`.
+    - Include a task to add/update JSDoc for any new exported symbols.
+    - Include a task to run `deno fmt` and `deno lint` before verify.
+    - Always include a `deno task verify` task before archive (covers fmt + lint + tests + ≥80% line coverage).
+    - Tasks should be small enough to complete in one session.

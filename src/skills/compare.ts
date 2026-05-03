@@ -2,10 +2,11 @@
  * coach:compare — Side-by-side comparison skill.
  */
 
-import { SKILL_ICONS } from "../utils/ascii.ts";
-import { detectLanguage } from "./ask.ts";
-import type { Skill, SkillResult, SessionContext } from "./base.ts";
+import { SKILL_ICONS } from '../utils/ascii.ts';
+import { detectLanguage } from './ask.ts';
+import type { SessionContext, Skill, SkillResult } from './base.ts';
 
+/** Result of {@link parseComparisonInput}: detected items plus optional surrounding context. */
 export interface ParsedComparison {
   items: string[];
   context?: string;
@@ -41,67 +42,75 @@ export function parseComparisonInput(input: string): ParsedComparison {
   return { items: [input] };
 }
 
+/**
+ * `coach:compare` skill — side-by-side comparison of two or more approaches.
+ *
+ * @example
+ * ```ts
+ * await runSkill(compareSkill, 'redis vs memcached for caching', context);
+ * ```
+ */
 export const compareSkill: Skill = {
-  id: "compare",
+  id: 'compare',
   icon: SKILL_ICONS.compare,
-  name: "coach:compare",
+  name: 'coach:compare',
 
-  async run(input: string, context: SessionContext): Promise<SkillResult> {
+  run(input: string, _context: SessionContext): Promise<SkillResult> {
     const parsed = parseComparisonInput(input);
     const lang = detectLanguage(input);
-    const tags = parsed.items.map((i) => i.toLowerCase().replace(/\s+/g, "-"));
+    const tags = parsed.items.map((i) => i.toLowerCase().replace(/\s+/g, '-'));
     if (parsed.context) tags.push(parsed.context.toLowerCase());
 
-    const itemsHeader = parsed.items.join(" vs ");
-    const ctxStr = parsed.context ? ` (${parsed.context})` : "";
+    const itemsHeader = parsed.items.join(' vs ');
+    const ctxStr = parsed.context ? ` (${parsed.context})` : '';
 
     const response = [
       `${SKILL_ICONS.compare}  coach:compare`,
-      "",
+      '',
       `> ${itemsHeader}${ctxStr}`,
-      "",
-      "---",
-      "",
-      "## Comparison Table",
-      "",
+      '',
+      '---',
+      '',
+      '## Comparison Table',
+      '',
       formatComparisonTableTemplate(parsed.items),
-      "",
-      "## Verdict",
+      '',
+      '## Verdict',
       `_Recommendation for when to use each approach${ctxStr}_`,
-      "",
-      "## Code Examples",
-      ...parsed.items.map((item) => [
-        "",
-        `### ${item}`,
-        "```",
-        `// ${item} example`,
-        "```",
-      ].join("\n")),
-      "",
-      "---",
-      "",
-      "_This is a prompt template. In pi agent mode, the agent fills in the comparison._",
-    ].join("\n");
+      '',
+      '## Code Examples',
+      ...parsed.items.map((item) =>
+        [
+          '',
+          `### ${item}`,
+          '```',
+          `// ${item} example`,
+          '```',
+        ].join('\n')
+      ),
+      '',
+      '---',
+      '',
+      '_This is a prompt template. In pi agent mode, the agent fills in the comparison._',
+    ].join('\n');
 
-    const title = parsed.items.map((i) =>
-      i.charAt(0).toUpperCase() + i.slice(1)
-    ).join(" vs ");
+    const title = parsed.items.map((i) => i.charAt(0).toUpperCase() + i.slice(1)).join(' vs ');
 
-    return {
+    return Promise.resolve({
       response,
       lang,
       tags,
       suggestedTitle: title,
-      suggestedType: "snippet",
-    };
+      suggestedType: 'snippet',
+    });
   },
 };
 
 function formatComparisonTableTemplate(items: string[]): string {
-  const header = `| Dimension    | ${items.join(" | ")} |`;
-  const sep = `|${"-".repeat(14)}|${items.map(() => "-".repeat(14)).join("|")}|`;
-  const rows = ["Speed", "Memory", "Readability", "Use-case"].map(
-    (dim) => `| ${dim.padEnd(12)} | ${items.map(() => "             ").join("| ")}|`,
+  const header = `| Dimension    | ${items.join(' | ')} |`;
+  const sep = `|${'-'.repeat(14)}|${items.map(() => '-'.repeat(14)).join('|')}|`;
+  const rows = ['Speed', 'Memory', 'Readability', 'Use-case'].map(
+    (dim) => `| ${dim.padEnd(12)} | ${items.map(() => '             ').join('| ')}|`,
   );
-  return [header, sep, ...rows].join("\n");
+  return [header, sep, ...rows].join('\n');
 }

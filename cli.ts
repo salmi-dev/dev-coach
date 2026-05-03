@@ -5,13 +5,13 @@
  * Entry point for the `coach` command.
  */
 
-import { parseArgs } from "@std/cli/parse-args";
-import { VERSION, SUBCOMMANDS } from "./src/cli/router.ts";
+import { parseArgs } from '@std/cli/parse-args';
+import { SUBCOMMANDS, VERSION } from './src/cli/router.ts';
 
 const args = parseArgs(Deno.args, {
-  boolean: ["help", "version"],
-  string: ["config"],
-  alias: { h: "help", v: "version", c: "config" },
+  boolean: ['help', 'version'],
+  string: ['config'],
+  alias: { h: 'help', v: 'version', c: 'config' },
   stopEarly: true,
 });
 
@@ -32,7 +32,7 @@ if (args.help || !subcommand) {
     coach <command> [options]
 
   COMMANDS:
-${Object.entries(SUBCOMMANDS).map(([cmd, desc]) => `    ${cmd.padEnd(12)} ${desc}`).join("\n")}
+${Object.entries(SUBCOMMANDS).map(([cmd, desc]) => `    ${cmd.padEnd(12)} ${desc}`).join('\n')}
 
   OPTIONS:
     -h, --help       Show this help message
@@ -42,5 +42,5 @@ ${Object.entries(SUBCOMMANDS).map(([cmd, desc]) => `    ${cmd.padEnd(12)} ${desc
   Deno.exit(0);
 }
 
-const { route } = await import("./src/cli/router.ts");
+const { route } = await import('./src/cli/router.ts');
 await route(subcommand, subArgs, args.config);

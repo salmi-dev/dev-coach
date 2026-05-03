@@ -2,8 +2,10 @@
  * Config schema and defaults for Dev Coach.
  */
 
-export type ResponseStyle = "concise" | "detailed" | "examples-first";
+/** Allowed response style values for skill output. */
+export type ResponseStyle = 'concise' | 'detailed' | 'examples-first';
 
+/** User-facing configuration shape persisted to `config.yaml`. */
 export interface CoachConfig {
   /** Path to user's library (snippets, tldrs, projects). Default: ~/dev-coach */
   library_path: string;
@@ -17,13 +19,15 @@ export interface CoachConfig {
   os: string;
 }
 
-export const VALID_RESPONSE_STYLES: ResponseStyle[] = ["concise", "detailed", "examples-first"];
+/** All response style values, in display order. */
+export const VALID_RESPONSE_STYLES: ResponseStyle[] = ['concise', 'detailed', 'examples-first'];
 
+/** Default configuration applied on first run / non-interactive init. */
 export const DEFAULT_CONFIG: CoachConfig = {
-  library_path: "~/dev-coach",
+  library_path: '~/dev-coach',
   primary_languages: [],
   frameworks: [],
-  response_style: "concise",
+  response_style: 'concise',
   os: Deno.build.os,
 };
 
@@ -33,7 +37,7 @@ export function validateConfigFields(config: Partial<CoachConfig>): string | nul
     config.response_style !== undefined &&
     !VALID_RESPONSE_STYLES.includes(config.response_style as ResponseStyle)
   ) {
-    return `Invalid response_style: "${config.response_style}". Must be one of: ${VALID_RESPONSE_STYLES.join(", ")}`;
+    return `Invalid response_style: "${config.response_style}". Must be one of: ${VALID_RESPONSE_STYLES.join(', ')}`;
   }
   if (config.primary_languages !== undefined && !Array.isArray(config.primary_languages)) {
     return `Invalid primary_languages: must be an array`;
@@ -41,7 +45,7 @@ export function validateConfigFields(config: Partial<CoachConfig>): string | nul
   if (config.frameworks !== undefined && !Array.isArray(config.frameworks)) {
     return `Invalid frameworks: must be an array`;
   }
-  if (config.library_path !== undefined && typeof config.library_path !== "string") {
+  if (config.library_path !== undefined && typeof config.library_path !== 'string') {
     return `Invalid library_path: must be a string`;
   }
   return null;

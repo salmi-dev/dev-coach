@@ -4,13 +4,13 @@
     "https://checkstyle.org/dtds/configuration_1_3.dtd">
 
 <module name="Checker">
-    <module name="TreeWalker">
-        <module name="JavadocMethod" />
-        <module name="AvoidStarImport" />
-        <module name="Indentation">
-          <property name="basicOffset" value="2" />
-          <property name="tabWidth" value="2" />
-          <property name="lineWrappingIndentation" value="2" />
-        </module>
+  <module name="TreeWalker">
+    <module name="JavadocMethod" />
+    <module name="AvoidStarImport" />
+    <module name="Indentation">
+      <property name="basicOffset" value="2" />
+      <property name="tabWidth" value="2" />
+      <property name="lineWrappingIndentation" value="2" />
     </module>
+  </module>
 </module>

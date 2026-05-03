@@ -1,10 +1,13 @@
 ## Why
 
-Change 01 built the project foundation (config, DB, XDG, CLI), but skills have no way to persist content. Every skill needs to save snippets, TLDRs, and projects to the user's library, search existing items, log sessions, and keep the dashboard up to date. Without a shared storage layer, each skill would duplicate file I/O, frontmatter handling, and DB sync logic. This change creates the single source of truth for all content operations.
+Change 01 built the project foundation (config, DB, XDG, CLI), but skills have no way to persist content. Every skill needs to save snippets, TLDRs, and
+projects to the user's library, search existing items, log sessions, and keep the dashboard up to date. Without a shared storage layer, each skill would
+duplicate file I/O, frontmatter handling, and DB sync logic. This change creates the single source of truth for all content operations.
 
 ## What Changes
 
-- **New `src/storage/` module** — Library manager for CRUD operations on snippets, TLDRs, and projects with automatic language-subfolder creation and slug generation
+- **New `src/storage/` module** — Library manager for CRUD operations on snippets, TLDRs, and projects with automatic language-subfolder creation and slug
+  generation
 - **Frontmatter parser/serializer** — Parse YAML frontmatter from markdown files and serialize typed frontmatter back to markdown
 - **DB index sync** — Upsert item metadata to `items` table after saves, rebuild index from filesystem, keep FTS5 in sync
 - **Search engine** — Query items by tags, full-text, type, language, or combined filters via FTS5 and SQL
