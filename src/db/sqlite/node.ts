@@ -26,7 +26,11 @@ import type { Database, RunResult, Statement } from './index.ts';
 type Any = any;
 
 class NodeStatement implements Statement {
-  constructor(private readonly stmt: Any) {}
+  private readonly stmt: Any;
+
+  constructor(stmt: Any) {
+    this.stmt = stmt;
+  }
 
   run(...params: unknown[]): RunResult {
     const result = this.stmt.run(...params);
@@ -46,7 +50,11 @@ class NodeStatement implements Statement {
 }
 
 class NodeDatabase implements Database {
-  constructor(private readonly db: Any) {}
+  private readonly db: Any;
+
+  constructor(db: Any) {
+    this.db = db;
+  }
 
   prepare(sql: string): Statement {
     return new NodeStatement(this.db.prepare(sql));

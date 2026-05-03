@@ -17,7 +17,12 @@ import type { Database, RunResult, Statement } from './index.ts';
 
 class DenoStatement implements Statement {
   // deno-lint-ignore no-explicit-any
-  constructor(private readonly stmt: any) {}
+  private readonly stmt: any;
+
+  // deno-lint-ignore no-explicit-any
+  constructor(stmt: any) {
+    this.stmt = stmt;
+  }
 
   run(...params: unknown[]): RunResult {
     const result = this.stmt.run(...params);
