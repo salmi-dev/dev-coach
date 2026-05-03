@@ -5,7 +5,7 @@
  * the user's real config and shell rc are never touched.
  */
 
-import { assertEquals, assertStringIncludes } from '@std/assert';
+import { assert, assertEquals, assertStringIncludes } from '@std/assert';
 import { join } from '@std/path';
 
 interface RunResult {
@@ -157,6 +157,61 @@ Deno.test('router: unknown command exits non-zero with error', async () => {
     const res = await runCoach(['no-such-cmd'], env);
     assertEquals(res.code, 1);
     assertStringIncludes(res.stderr, 'Unknown command');
+  } finally {
+    await cleanup();
+  }
+});
+
+Deno.test('router: --no-color suppresses ANSI escapes in stdout', async () => {
+  const { env, cleanup } = await setupTempEnv();
+  try {
+    // Pre-warm: first invocation may print plug download progress (with ANSI) to stdout.
+    await runCoach(['tldr', 'list'], env);
+    const res = await runCoach(['--no-color', 'tldr', 'list'], env);
+    assertEquals(res.code, 0, `stderr: ${res.stderr}`);
+    // deno-lint-ignore no-control-regex
+    assertEquals(/\x1b\[/.test(res.stdout), false, `unexpected ANSI in stdout: ${JSON.stringify(res.stdout)}`);
+  } finally {
+    await cleanup();
+  }
+});
+
+Deno.test('router: NO_COLOR env suppresses ANSI escapes', async () => {
+  const { env, cleanup } = await setupTempEnv();
+  try {
+    await runCoach(['tldr', 'list'], env); // pre-warm
+    const res = await runCoach(['tldr', 'list'], { ...env, NO_COLOR: '1' });
+    assertEquals(res.code, 0, `stderr: ${res.stderr}`);
+    // deno-lint-ignore no-control-regex
+    assertEquals(/\x1b\[/.test(res.stdout), false);
+  } finally {
+    await cleanup();
+  }
+});
+
+Deno.test('router: skill subcommand prints ASCII banner', async () => {
+  const { env, cleanup } = await setupTempEnv();
+  try {
+    await runCoach(['tldr', 'list'], env); // pre-warm so plug download doesn't pollute output
+    const res = await runCoach(['ask', 'how do I parse json'], env);
+    assertEquals(res.code, 0, `stderr: ${res.stderr}`);
+    // Banner uses corner box-drawing characters and contains `coach:ask`.
+    assertStringIncludes(res.stdout, 'coach:ask');
+    assert(res.stdout.includes('╭') || res.stdout.includes('│'), `expected banner border in stdout: ${JSON.stringify(res.stdout.slice(0, 200))}`);
+  } finally {
+    await cleanup();
+  }
+});
+
+Deno.test('router: library subcommand does NOT print a banner', async () => {
+  const { env, cleanup } = await setupTempEnv();
+  try {
+    await runCoach(['tldr', 'list'], env); // pre-warm
+    const res = await runCoach(['tldr', 'list'], env);
+    assertEquals(res.code, 0, `stderr: ${res.stderr}`);
+    // No corner-box characters in tldr list output.
+    assertEquals(res.stdout.includes('╭'), false);
+    assertEquals(res.stdout.includes('╰'), false);
   } finally {
     await cleanup();
   }
