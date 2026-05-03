@@ -220,12 +220,12 @@ and publish a GitHub Release at the bumped tag using `softprops/action-gh-releas
 All third-party actions used in `.github/workflows/` SHALL be pinned to their current major version tag and SHALL be reviewed when this spec changes. The
 currently approved set is:
 
-- `actions/checkout@v4`
+- `actions/checkout@v6`
 - `denoland/setup-deno@v2`
-- `actions/upload-artifact@v4`
-- `actions/download-artifact@v4`
-- `actions/attest-build-provenance@v2`
-- `softprops/action-gh-release@v2`
+- `actions/upload-artifact@v7`
+- `actions/download-artifact@v8`
+- `actions/attest-build-provenance@v4`
+- `softprops/action-gh-release@v3`
 
 #### Scenario: Audit pinned actions
 
