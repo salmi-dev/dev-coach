@@ -1,0 +1,130 @@
+/* Catppuccin Mocha Palette
+   https://github.com/catppuccin/catppuccin */
+
+:root {
+  /* Base */
+  --ctp-base: #1e1e2e;
+  --ctp-mantle: #181825;
+  --ctp-crust: #11111b;
+
+  /* Surface */
+  --ctp-surface0: #313244;
+  --ctp-surface1: #45475a;
+  --ctp-surface2: #585b70;
+
+  /* Text */
+  --ctp-text: #cdd6f4;
+  --ctp-subtext0: #a6adc8;
+  --ctp-subtext1: #bac2de;
+
+  /* Accent colors */
+  --ctp-rosewater: #f5e0dc;
+  --ctp-flamingo: #f2cdcd;
+  --ctp-pink: #f5c2e7;
+  --ctp-mauve: #cba6f7;
+  --ctp-red: #f38ba8;
+  --ctp-maroon: #eba0ac;
+  --ctp-peach: #fab387;
+  --ctp-yellow: #f9e2af;
+  --ctp-green: #a6e3a1;
+  --ctp-teal: #94e2d5;
+  --ctp-sky: #89dceb;
+  --ctp-sapphire: #74c7ec;
+  --ctp-blue: #89b4fa;
+  --ctp-lavender: #b4befe;
+
+  /* Slidev overrides */
+  --slidev-theme-primary: #89b4fa;
+  --slidev-theme-cover-background: #1e1e2e;
+}
+
+/* Global slide styles */
+.slidev-layout {
+  background-color: var(--ctp-base) !important;
+  color: var(--ctp-text) !important;
+}
+
+/* Headings */
+.slidev-layout h1 {
+  color: var(--ctp-blue) !important;
+}
+
+.slidev-layout h2 {
+  color: var(--ctp-mauve) !important;
+}
+
+.slidev-layout h3 {
+  color: var(--ctp-lavender) !important;
+}
+
+/* Links */
+.slidev-layout a {
+  color: var(--ctp-sapphire) !important;
+  text-decoration: underline;
+}
+
+.slidev-layout a:hover {
+  color: var(--ctp-sky) !important;
+}
+
+/* Strong / bold */
+.slidev-layout strong {
+  color: var(--ctp-peach);
+}
+
+/* Inline code */
+.slidev-layout code:not(pre code) {
+  background-color: var(--ctp-surface0) !important;
+  color: var(--ctp-green) !important;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Code blocks */
+.slidev-layout pre {
+  background-color: var(--ctp-mantle) !important;
+  border: 1px solid var(--ctp-surface0);
+  border-radius: 8px;
+}
+
+/* Lists */
+.slidev-layout li {
+  color: var(--ctp-subtext1);
+}
+
+.slidev-layout li::marker {
+  color: var(--ctp-mauve);
+}
+
+/* Slide number */
+.slidev-page-number {
+  color: var(--ctp-surface2) !important;
+}
+
+/* Navigation */
+.slidev-nav {
+  background-color: var(--ctp-mantle) !important;
+}
+
+/* Blockquote */
+.slidev-layout blockquote {
+  border-left: 4px solid var(--ctp-mauve);
+  background-color: var(--ctp-surface0);
+  padding: 0.5em 1em;
+  border-radius: 0 8px 8px 0;
+  color: var(--ctp-subtext0);
+}
+
+/* Mermaid diagrams — fit to slide */
+.mermaid {
+  display: flex;
+  justify-content: center;
+  max-height: 70vh;
+  overflow: hidden;
+}
+
+.mermaid svg {
+  max-height: 65vh;
+  max-width: 100%;
+  height: auto;
+}
