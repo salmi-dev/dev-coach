@@ -95,21 +95,22 @@ The OpenSpec project context (`openspec/config.yaml`) SHALL include in its `rule
 
 The repository SHALL include a GitHub Actions workflow at `.github/workflows/pipeline.yml` (workflow name `CI`) that runs on every push to `main` and every pull
 request targeting `main`. The workflow SHALL execute the same gates a developer runs locally via `deno task verify`, broken into separate jobs for visibility:
-`fmt`, `lint`, `build`, `test`, `verify`, plus an aggregating `ci-gate` job, and a `publish` job restricted to push events on `main`.
+`fmt`, `lint`, `build`, `test`, `verify`, plus an aggregating `ci-gate` job. JSR publishing is **not** part of this workflow — it lives in the `Release`
+workflow so a package version is only published when a maintainer cuts a release.
 
 #### Scenario: Push to main runs the full pipeline
 
 - **WHEN** a commit is pushed to `main`
-- **THEN** GitHub Actions SHALL run jobs `fmt`, `lint`, `build`, `test`, `verify`, `ci-gate`, and `publish` in that dependency order
+- **THEN** GitHub Actions SHALL run jobs `fmt`, `lint`, `build`, `test`, `verify`, and `ci-gate` in that dependency order
 - **AND** `build` and `test` SHALL depend on `fmt` and `lint`
 - **AND** `verify` SHALL depend on `build` and `test`
-- **AND** `publish` SHALL depend on `verify`
+- **AND** no JSR publish SHALL occur from this workflow
 
 #### Scenario: Pull request runs gates without publishing
 
 - **WHEN** a pull request targets `main`
 - **THEN** the workflow SHALL run `fmt`, `lint`, `build`, `test`, `verify`, and `ci-gate`
-- **AND** the `publish` job SHALL be skipped (it requires `github.event_name == 'push'` and `github.ref == 'refs/heads/main'`)
+- **AND** no JSR publish SHALL occur (publishing is gated on the `Release` workflow only)
 
 #### Scenario: CI gate aggregates results
 
@@ -133,20 +134,22 @@ The `build` job SHALL run `deno task build` to produce the `coach` binary, uploa
 - **THEN** the `coach` binary SHALL be available as artifact `coach-linux-x86_64`
 - **AND** an SLSA build-provenance attestation SHALL be recorded for that subject
 
-### Requirement: Publish job pushes to JSR with provenance
+### Requirement: Publish to JSR happens from the Release workflow
 
-The `publish` job SHALL run `deno publish` with `id-token: write` so that JSR auto-generates and signs SLSA build provenance via Sigstore. The job SHALL only
-run for push events on `main`.
+The `Release` workflow (`.github/workflows/release.yml`) SHALL include a `publish` job that runs `deno publish` with `id-token: write` so that JSR
+auto-generates and signs SLSA build provenance via Sigstore. The job SHALL depend on `bump` and check out the bumped tag (`vX.Y.Z`) so the version published to
+JSR matches the version on the GitHub Release. The CI pipeline (`pipeline.yml`) SHALL NOT publish to JSR.
 
-#### Scenario: Publish on main
+#### Scenario: Release publishes the bumped version
 
-- **WHEN** `verify` succeeds on a push to `main`
-- **THEN** `deno publish` SHALL be invoked and the published version SHALL appear at `https://jsr.io/@salmidev/dev-coach`
+- **WHEN** a maintainer dispatches `Release` and the `bump` job succeeds
+- **THEN** the `publish` job SHALL check out tag `vX.Y.Z` and run `deno publish`
+- **AND** the published version SHALL appear at `https://jsr.io/@salmidev/dev-coach` with the same `vX.Y.Z`
 
-#### Scenario: Publish skipped on PR
+#### Scenario: Push to main does not publish to JSR
 
-- **WHEN** the workflow is triggered by a pull request
-- **THEN** the `publish` job SHALL not run
+- **WHEN** a commit is pushed to `main` (including a release bump commit, which carries `[skip ci]`)
+- **THEN** no `deno publish` SHALL be invoked from the CI workflow
 
 ### Requirement: Manual release workflow with semver bump
 
