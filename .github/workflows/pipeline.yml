@@ -172,13 +172,13 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - name: Run tests
+      - name: Run tests with coverage
         id: test
         run: |
           set -o pipefail
           LOG="${RUNNER_TEMP:-/tmp}/test.out"
           CLEAN="${RUNNER_TEMP:-/tmp}/test.clean"
-          if deno task test 2>&1 | tee "$LOG"; then
+          if deno task coverage:report 2>&1 | tee "$LOG"; then
             # Strip ANSI before parsing so regexes don't have to deal with escape codes.
             sed 's/\x1b\[[0-9;]*[A-Za-z]//g' "$LOG" > "$CLEAN"
             # deno test summary line: "ok | N passed | M failed (Xs)"
@@ -187,13 +187,34 @@ jobs:
             failed=$(echo "$summary" | grep -oE '[0-9]+ failed' | head -1 | grep -oE '[0-9]+' || echo '0')
             duration=$(echo "$summary" | grep -oE '\([0-9]+m?s\)' | tr -d '()' || echo '?')
             {
-              echo '### ✅ Tests passed'
+              echo '### ✅ Tests passed (with coverage)'
               echo ''
               echo '| Metric | Value |'
               echo '| --- | --- |'
               echo "| Passed   | $passed |"
               echo "| Failed   | $failed |"
               echo "| Duration | $duration |"
+              # Coverage "All files" row from the deno coverage table.
+              all_files=$(grep -E "All files" "$CLEAN" | tail -1 || echo '')
+              if [ -n "$all_files" ]; then
+                branch=$(echo "$all_files" | awk -F'|' '{print $3}' | tr -d ' ')
+                func=$(echo "$all_files"   | awk -F'|' '{print $4}' | tr -d ' ')
+                line=$(echo "$all_files"   | awk -F'|' '{print $5}' | tr -d ' ')
+                echo "| Branch % | ${branch}% |"
+                echo "| Function % | ${func}% |"
+                echo "| Line %   | ${line}% |"
+              fi
+              echo ''
+              echo '#### Coverage breakdown (`src/`)'
+              echo ''
+              echo '<details><summary>Per-file coverage table</summary>'
+              echo ''
+              echo '```'
+              grep -E '^\| ' "$CLEAN" | head -200 || true
+              echo '```'
+              echo '</details>'
+              echo ''
+              echo 'Coverage profile uploaded as artifact `deno-cov-profile` for the `verify` job to consume (no second `deno test` pass).'
             } >> "$GITHUB_STEP_SUMMARY"
           else
             sed 's/\x1b\[[0-9;]*[A-Za-z]//g' "$LOG" > "$CLEAN" || true
@@ -214,37 +235,83 @@ jobs:
             } >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
+      - name: Upload coverage profile
+        uses: actions/upload-artifact@v7
+        with:
+          name: deno-cov-profile
+          path: cov_profile
+          if-no-files-found: error
+          retention-days: 1
 
   test-bun:
     name: Test (Bun)
     runs-on: ubuntu-latest
     needs: [fmt, lint]
-    # Initially non-blocking — flip to false once we've had ≥ 5 consecutive
-    # green runs on main (task 7.6 of boost-jsr-score-and-runtime-compat).
-    continue-on-error: true
+    # Blocking: cross-runtime compat is now load-bearing for the JSR
+    # `runtimeCompat` claim. A Bun regression should fail the gate.
     steps:
       - uses: actions/checkout@v6
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-      - name: Run cross-runtime suite on Bun
-        run: bun test tests/cross-runtime/
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Run cross-runtime suite on Bun (with coverage)
+        id: bun-test
+        run: |
+          set -o pipefail
+          LOG="${RUNNER_TEMP:-/tmp}/bun-test.out"
+          bun test --coverage --coverage-reporter=lcov tests/cross-runtime/ 2>&1 | tee "$LOG"
+      - name: Coverage threshold (cross-runtime preset)
+        id: bun-cov
+        run: |
+          set -o pipefail
+          LCOV='coverage/lcov.info'
+          if [ ! -f "$LCOV" ]; then
+            echo "::error::Bun lcov file not found at $LCOV"
+            ls -la coverage/ || true
+            exit 1
+          fi
+          OUT="${RUNNER_TEMP:-/tmp}/bun-cov.out"
+          deno run --allow-read --allow-run scripts/check-coverage.ts \
+            --lcov "$LCOV" --profile cross-runtime --threshold 60 2>&1 | tee "$OUT"
       - name: Summary
         if: always()
         run: |
+          BLOG="${RUNNER_TEMP:-/tmp}/bun-test.out"
+          COUT="${RUNNER_TEMP:-/tmp}/bun-cov.out"
+          BCLEAN="${RUNNER_TEMP:-/tmp}/bun-test.clean"
+          [ -f "$BLOG" ] && sed 's/\x1b\[[0-9;]*[A-Za-z]//g' "$BLOG" > "$BCLEAN" || true
+          test_summary=$(grep -E "^Ran [0-9]+ tests across" "$BCLEAN" 2>/dev/null | tail -1 || echo '')
+          tests_pass=$(grep -E "^ *[0-9]+ pass" "$BCLEAN" 2>/dev/null | tail -1 | tr -s ' ' || echo '')
+          tests_fail=$(grep -E "^ *[0-9]+ fail" "$BCLEAN" 2>/dev/null | tail -1 | tr -s ' ' || echo '')
           {
             echo '### 🥢 Bun cross-runtime tests'
             echo ''
-            echo "Bun: $(bun --version)"
+            echo '| Metric | Value |'
+            echo '| --- | --- |'
+            echo "| Bun version | $(bun --version) |"
+            echo "| Tests       | ${tests_pass:-?} / ${tests_fail:-?} |"
+            echo "| Run         | ${test_summary:-—} |"
+            echo "| Result      | ${{ job.status }} |"
             echo ''
-            echo "Result: ${{ job.status }}"
+            echo '#### Coverage gate'
+            echo ''
+            if [ -f "$COUT" ]; then
+              echo '```'
+              cat "$COUT"
+              echo '```'
+            else
+              echo '_Coverage step did not produce output (job likely failed earlier)._'
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
   test-node:
     name: Test (Node ${{ matrix.node-version }})
     runs-on: ubuntu-latest
     needs: [fmt, lint]
-    continue-on-error: true
+    # Blocking: see test-bun rationale above.
     strategy:
       fail-fast: false
       matrix:
@@ -262,31 +329,77 @@ jobs:
             ts-flag: ''
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
       - name: Install better-sqlite3 (Node 22 fallback path)
         if: matrix.install-better-sqlite3 == 'true'
         run: npm install --no-save --no-package-lock better-sqlite3
-      - name: Run cross-runtime suite on Node
+      - name: Run cross-runtime suite on Node (with coverage)
+        id: node-test
         run: |
+          set -o pipefail
           # Node 22 needs --experimental-strip-types to load .ts files;
-          # Node 24 strips types by default.
+          # Node 24 strips types by default. --experimental-test-coverage is
+          # still the flag name on both Node 22 and Node 24.
           # node --test does not recursively discover from a bare directory
           # path — pass explicit file paths via shell glob.
+          mkdir -p coverage
           shopt -s nullglob
           files=(tests/cross-runtime/*.test.ts)
-          node ${{ matrix.ts-flag }} --test "${files[@]}"
+          LOG="${RUNNER_TEMP:-/tmp}/node-test.out"
+          node ${{ matrix.ts-flag }} \
+            --experimental-test-coverage \
+            --test-reporter=lcov --test-reporter-destination=coverage/node-lcov.info \
+            --test-reporter=spec --test-reporter-destination=stdout \
+            --test "${files[@]}" 2>&1 | tee "$LOG"
+      - name: Coverage threshold (cross-runtime preset)
+        id: node-cov
+        run: |
+          set -o pipefail
+          LCOV='coverage/node-lcov.info'
+          if [ ! -f "$LCOV" ]; then
+            echo "::error::Node lcov file not found at $LCOV"
+            ls -la coverage/ || true
+            exit 1
+          fi
+          OUT="${RUNNER_TEMP:-/tmp}/node-cov.out"
+          deno run --allow-read --allow-run scripts/check-coverage.ts \
+            --lcov "$LCOV" --profile cross-runtime --threshold 60 2>&1 | tee "$OUT"
       - name: Summary
         if: always()
         run: |
+          NLOG="${RUNNER_TEMP:-/tmp}/node-test.out"
+          COUT="${RUNNER_TEMP:-/tmp}/node-cov.out"
+          NCLEAN="${RUNNER_TEMP:-/tmp}/node-test.clean"
+          [ -f "$NLOG" ] && sed 's/\x1b\[[0-9;]*[A-Za-z]//g' "$NLOG" > "$NCLEAN" || true
+          tests_pass=$(grep -E "# pass " "$NCLEAN" 2>/dev/null | tail -1 | tr -d '#' | tr -s ' ' | sed 's/^ //' || echo '')
+          tests_fail=$(grep -E "# fail " "$NCLEAN" 2>/dev/null | tail -1 | tr -d '#' | tr -s ' ' | sed 's/^ //' || echo '')
+          tests_dur=$(grep -E "# duration_ms " "$NCLEAN" 2>/dev/null | tail -1 | tr -d '#' | tr -s ' ' | sed 's/^ //' || echo '')
           {
             echo "### 🟢 Node ${{ matrix.node-version }} cross-runtime tests"
             echo ''
-            echo "Node: $(node --version)"
-            echo "Driver: ${{ matrix.install-better-sqlite3 == 'true' && 'better-sqlite3 (fallback path)' || 'node:sqlite (built-in)' }}"
+            echo '| Metric | Value |'
+            echo '| --- | --- |'
+            echo "| Node version | $(node --version) |"
+            echo "| SQLite driver | ${{ matrix.install-better-sqlite3 == 'true' && 'better-sqlite3 (fallback)' || 'node:sqlite (built-in)' }} |"
+            echo "| Tests pass   | ${tests_pass:-?} |"
+            echo "| Tests fail   | ${tests_fail:-?} |"
+            echo "| Duration     | ${tests_dur:-?} |"
+            echo "| Result       | ${{ job.status }} |"
             echo ''
-            echo "Result: ${{ job.status }}"
+            echo '#### Coverage gate'
+            echo ''
+            if [ -f "$COUT" ]; then
+              echo '```'
+              cat "$COUT"
+              echo '```'
+            else
+              echo '_Coverage step did not produce output (job likely failed earlier)._'
+            fi
           } >> "$GITHUB_STEP_SUMMARY"
 
   verify:
@@ -298,35 +411,30 @@ jobs:
       - uses: denoland/setup-deno@v2
         with:
           deno-version: v2.x
-      - name: Verify (fmt + lint + coverage)
+      - name: Download coverage profile
+        uses: actions/download-artifact@v8
+        with:
+          name: deno-cov-profile
+          path: cov_profile
+      - name: Coverage threshold check
         id: verify
         run: |
           set -o pipefail
           LOG="${RUNNER_TEMP:-/tmp}/verify.out"
           CLEAN="${RUNNER_TEMP:-/tmp}/verify.clean"
-          if deno task verify 2>&1 | tee "$LOG"; then
+          if deno task coverage:check 2>&1 | tee "$LOG"; then
             sed 's/\x1b\[[0-9;]*[A-Za-z]//g' "$LOG" > "$CLEAN"
             cov_line=$(grep -E "^(✅|❌) Coverage" "$CLEAN" | tail -1 || echo '')
-            all_files=$(grep -E "All files" "$CLEAN" | tail -1 || echo '')
-            branch=$(echo "$all_files" | awk -F'|' '{print $3}' | tr -d ' ' || echo '?')
-            func=$(echo "$all_files"   | awk -F'|' '{print $4}' | tr -d ' ' || echo '?')
-            line=$(echo "$all_files"   | awk -F'|' '{print $5}' | tr -d ' ' || echo '?')
             {
               echo '### ✅ Verify passed'
               echo ''
-              if [ -n "$cov_line" ]; then echo "$cov_line"; echo ''; fi
-              echo '| Coverage | Value |'
-              echo '| --- | --- |'
-              echo "| Line     | ${line:-?}% |"
-              echo "| Branch   | ${branch:-?}% |"
-              echo "| Function | ${func:-?}% |"
-              echo ''
-              echo '<details><summary>Per-file coverage table</summary>'
+              echo '#### Coverage gate (Deno, `src/` ≥ 80%)'
               echo ''
               echo '```'
-              grep -E '^\| ' "$CLEAN" | head -200 || true
+              cat "$CLEAN"
               echo '```'
-              echo '</details>'
+              echo ''
+              echo 'Consumed `deno-cov-profile` artifact produced by the `test` job. No second `deno test` pass.'
             } >> "$GITHUB_STEP_SUMMARY"
           else
             sed 's/\x1b\[[0-9;]*[A-Za-z]//g' "$LOG" > "$CLEAN" || true
@@ -383,16 +491,19 @@ jobs:
             echo "| Lint         | $(icon "$lint_r") $lint_r |"
             echo "| Build        | $(icon "$build_r") $build_r |"
             echo "| Test (Deno)  | $(icon "$test_r") $test_r |"
-            echo "| Test (Bun)   | $(icon "$test_bun_r") $test_bun_r _(non-blocking)_ |"
-            echo "| Test (Node)  | $(icon "$test_node_r") $test_node_r _(non-blocking)_ |"
+            echo "| Test (Bun)   | $(icon "$test_bun_r") $test_bun_r |"
+            echo "| Test (Node)  | $(icon "$test_node_r") $test_node_r |"
             echo "| Verify       | $(icon "$verify_r") $verify_r |"
+            echo ''
+            echo 'Coverage gates: Deno (≥0.80) is enforced by `Verify`; cross-runtime (≥0.60 on `src/utils/runtime/**`, `src/db/sqlite/**`, `src/utils/prompt.ts`) is enforced inside `Test (Bun)` and `Test (Node)`.'
           } >> "$GITHUB_STEP_SUMMARY"
 
-          # test-bun and test-node are non-blocking until we've proven them
-          # stable on main (task 7.6 of boost-jsr-score-and-runtime-compat).
-          # Only the original five jobs gate the workflow.
+          # All seven jobs are now blocking. Bun and Node previously had
+          # continue-on-error: true under task 7.6 of
+          # boost-jsr-score-and-runtime-compat; that gate was lifted once
+          # the cross-runtime suite + coverage gates proved stable.
           blocking_failed='false'
-          for r in "$fmt_r" "$lint_r" "$build_r" "$test_r" "$verify_r"; do
+          for r in "$fmt_r" "$lint_r" "$build_r" "$test_r" "$test_bun_r" "$test_node_r" "$verify_r"; do
             if [[ "$r" == 'failure' || "$r" == 'cancelled' ]]; then
               blocking_failed='true'
             fi
@@ -405,9 +516,5 @@ jobs:
             exit 1
           fi
           echo '' >> "$GITHUB_STEP_SUMMARY"
-          if [[ "$test_bun_r" != 'success' || "$test_node_r" != 'success' ]]; then
-            echo '**⚠️  All blocking jobs passed; cross-runtime jobs reported a non-success status (currently non-blocking).**' >> "$GITHUB_STEP_SUMMARY"
-          else
-            echo '**✅ All CI jobs passed.**' >> "$GITHUB_STEP_SUMMARY"
-          fi
+          echo '**✅ All CI jobs passed.**' >> "$GITHUB_STEP_SUMMARY"
           echo "All blocking CI jobs passed"
