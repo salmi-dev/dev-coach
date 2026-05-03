@@ -1,3 +1,4 @@
+import './_db_warmup.ts';
 /**
  * Direct `.run()` tests for prompt-template skills (ask, explain, compare, sandbox, review, stats)
  * plus pure helpers (parseSelection, parseLangSelection, formatSummaryTable, renderBar, etc.).
@@ -7,7 +8,7 @@
  */
 
 import { assert, assertEquals, assertStringIncludes } from '@std/assert';
-import { Database } from '@db/sqlite';
+import { openDb } from '../src/db/sqlite/index.ts';
 import { runMigrations } from '../src/db/migrations.ts';
 import { askSkill } from '../src/skills/ask.ts';
 import { explainSkill } from '../src/skills/explain.ts';
@@ -23,8 +24,8 @@ import type { SessionContext } from '../src/skills/base.ts';
 import { search } from '../src/storage/search.ts';
 import { setColorEnabled } from '../src/utils/colors.ts';
 
-function makeContext(libraryPath = '/tmp/never'): SessionContext {
-  const db = new Database(':memory:');
+async function makeContext(libraryPath = '/tmp/never'): Promise<SessionContext> {
+  const db = await openDb(':memory:');
   runMigrations(db);
   return {
     db,
@@ -42,20 +43,20 @@ function makeContext(libraryPath = '/tmp/never'): SessionContext {
 
 async function makeRealContext(): Promise<SessionContext> {
   const lib = await Deno.makeTempDir({ prefix: 'coach-skills-test-' });
-  return makeContext(lib);
+  return await makeContext(lib);
 }
 
 // ── ask skill ─────────────────────────────────────────────────
 
 Deno.test('askSkill.run: returns response with detected lang', async () => {
-  const res = await askSkill.run('how do I parse json in python', makeContext());
+  const res = await askSkill.run('how do I parse json in python', await makeContext());
   assertEquals(res.suggestedType, 'tldr');
   assertEquals(res.lang, 'python');
   assertStringIncludes(res.response, 'coach:ask');
 });
 
 Deno.test('askSkill.run: no language detected for generic question', async () => {
-  const res = await askSkill.run('what is a closure', makeContext());
+  const res = await askSkill.run('what is a closure', await makeContext());
   assertEquals(res.lang, undefined);
   assert(res.response.length > 0);
 });
@@ -63,7 +64,7 @@ Deno.test('askSkill.run: no language detected for generic question', async () =>
 // ── explain skill ─────────────────────────────────────────────
 
 Deno.test('explainSkill.run: produces structured 6-section template', async () => {
-  const res = await explainSkill.run('event loop', makeContext());
+  const res = await explainSkill.run('event loop', await makeContext());
   assertEquals(res.suggestedType, 'tldr');
   for (const section of ['One-liner', 'Core Concept', 'How It Works', 'Example', 'Gotchas', 'Related']) {
     assertStringIncludes(res.response, section);
@@ -84,7 +85,7 @@ Deno.test('parseComparisonInput: handles "for caching" suffix as context', () =>
 });
 
 Deno.test('compareSkill.run: produces comparison template', async () => {
-  const res = await compareSkill.run('rust vs go', makeContext());
+  const res = await compareSkill.run('rust vs go', await makeContext());
   assertEquals(res.suggestedType, 'snippet');
   assertStringIncludes(res.response, 'Comparison Table');
   assertStringIncludes(res.response, 'Verdict');
@@ -93,7 +94,7 @@ Deno.test('compareSkill.run: produces comparison template', async () => {
 // ── sandbox skill ─────────────────────────────────────────────
 
 Deno.test('sandboxSkill.run: produces 3-approach template', async () => {
-  const res = await sandboxSkill.run('parse json', makeContext());
+  const res = await sandboxSkill.run('parse json', await makeContext());
   assertEquals(res.suggestedType, 'snippet');
   assertStringIncludes(res.response, 'Approach 1');
   assertStringIncludes(res.response, 'Approach 2');
@@ -117,7 +118,7 @@ Deno.test('detectLanguageFromContent: returns undefined on empty', () => {
 });
 
 Deno.test('reviewSkill.run: produces review template (inline code)', async () => {
-  const res = await reviewSkill.run('fn add(a: i32, b: i32) -> i32 { a + b }', makeContext());
+  const res = await reviewSkill.run('fn add(a: i32, b: i32) -> i32 { a + b }', await makeContext());
   assertEquals(res.suggestedType, 'tldr');
   for (const section of ['Bugs', 'Style', 'Performance', 'Security', 'Architecture']) {
     assertStringIncludes(res.response, section);
@@ -143,8 +144,8 @@ Deno.test('renderLanguageBars: clips to top 5', () => {
   assertEquals(out.length, 5);
 });
 
-Deno.test('renderMonthlyDashboard: renders against empty DB', () => {
-  const ctx = makeContext();
+Deno.test('renderMonthlyDashboard: renders against empty DB', async () => {
+  const ctx = await makeContext();
   const out = renderMonthlyDashboard(ctx.db);
   assert(out.length > 0);
 });

@@ -2,7 +2,7 @@
  * Base skill interface and shared runner.
  */
 
-import { Database } from '@db/sqlite';
+import { type Database } from '../db/sqlite/index.ts';
 import { CoachConfig } from '../config/schema.ts';
 import { search, type SearchFilters, type SearchResult } from '../storage/search.ts';
 import { logSession } from '../db/logger.ts';
@@ -46,7 +46,7 @@ export interface Skill {
 /** Build a session context (loads config, opens DB, exposes search helper). */
 export async function createContext(configPath?: string): Promise<SessionContext> {
   const config = await loadConfig(configPath);
-  const db = getDb();
+  const db = await getDb();
   const libraryPath = getLibraryPath(config.library_path);
 
   return {

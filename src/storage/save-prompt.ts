@@ -2,7 +2,7 @@
  * Save prompt flow — interactive save UX for skills.
  */
 
-import { Database } from '@db/sqlite';
+import { type Database } from '../db/sqlite/index.ts';
 import { copyToClipboard, detectClipboardTool } from '../utils/clipboard.ts';
 import { readPromptLine } from '../utils/prompt.ts';
 import { type ItemType, saveItem, type SaveItemOptions } from './library.ts';

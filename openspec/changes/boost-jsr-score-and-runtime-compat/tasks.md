@@ -64,10 +64,10 @@
 
 - [x] 6.1 Replace direct `Deno.*` calls in every file under `src/` (except adapter impls + `src/db/connection.ts`, deferred to 6.2 because it's tangled with the
       `@db/sqlite` import) with `runtime.*` calls; ran `deno task test` after each chunk to keep changes reviewable
-- [ ] 6.2 Replace direct `import { Database } from '@db/sqlite'` in every file under `src/db/` (except `src/db/sqlite/deno.ts`) with the adapter `openDb()` /
-      `Database` type — includes the deferred `Deno.mkdirSync` in `src/db/connection.ts`
-- [ ] 6.3 Confirm `mod.ts` public types are unchanged (run `deno check mod.ts`; diff `deno doc --json mod.ts` against pre-cutover output)
-- [ ] 6.4 Run full suite: `deno task verify` must pass
+- [x] 6.2 Replace direct `import { Database } from '@db/sqlite'` in every file under `src/db/` (except `src/db/sqlite/deno.ts`) with the adapter `openDb()` /
+      `Database` type — includes the deferred `Deno.mkdirSync` in `src/db/connection.ts`. `getDb()` is now async; ~13 callers gained `await`.
+- [x] 6.3 Confirm `mod.ts` public types are unchanged (verified via `deno doc --json mod.ts` diff against pre-cutover output — identical exported set)
+- [x] 6.4 Run full suite: `deno task verify` passes (266/266 tests, 84.7% coverage)
 - [ ] 6.5 Add JSDoc updates anywhere a function signature gained adapter parameters
 
 ## 7. CI matrix — verify cross-runtime claims

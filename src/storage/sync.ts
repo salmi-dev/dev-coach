@@ -2,7 +2,7 @@
  * DB index sync — keep `items` table in sync with filesystem.
  */
 
-import { Database } from '@db/sqlite';
+import { type Database } from '../db/sqlite/index.ts';
 import { join, relative } from '@std/path';
 import { walk } from '@std/fs';
 import { runtime } from '../utils/runtime/index.ts';

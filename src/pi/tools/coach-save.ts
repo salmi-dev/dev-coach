@@ -26,7 +26,7 @@ export async function coachSave(params: {
   tags: string[];
 }): Promise<{ path: string }> {
   const config = await loadConfig();
-  const db = getDb();
+  const db = await getDb();
   const libraryPath = getLibraryPath(config.library_path);
 
   try {

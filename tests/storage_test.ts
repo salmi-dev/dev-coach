@@ -1,7 +1,8 @@
+import './_db_warmup.ts';
 import { assertEquals } from '@std/assert';
 import { join } from '@std/path';
 import { exists } from '@std/fs';
-import { Database } from '@db/sqlite';
+import { type Database, openDb } from '../src/db/sqlite/index.ts';
 import { runMigrations } from '../src/db/migrations.ts';
 import { deleteItem, listItems, readItem, saveItem, toSlug } from '../src/storage/library.ts';
 import { rebuildIndex } from '../src/storage/sync.ts';
@@ -16,8 +17,8 @@ await Deno.mkdir(join(TEST_LIB, 'snippets'), { recursive: true });
 await Deno.mkdir(join(TEST_LIB, 'tldr'), { recursive: true });
 await Deno.mkdir(join(TEST_LIB, 'projects'), { recursive: true });
 
-function freshDb(): Database {
-  const db = new Database(':memory:');
+async function freshDb(): Promise<Database> {
+  const db = await openDb(':memory:');
   runMigrations(db);
   return db;
 }
@@ -39,7 +40,7 @@ Deno.test('toSlug collapses multiple hyphens', () => {
 // ── Save / Read / Delete Tests ─────────────────────────────────
 
 Deno.test('saveItem creates snippet file with frontmatter', async () => {
-  const db = freshDb();
+  const db = await freshDb();
   const path = await saveItem(db, 'snippet', '# JSON Parse\n\nCode here.', {
     title: 'JSON Parse',
     tags: ['json', 'serde'],
@@ -59,7 +60,7 @@ Deno.test('saveItem creates snippet file with frontmatter', async () => {
 });
 
 Deno.test('saveItem creates tldr file', async () => {
-  const db = freshDb();
+  const db = await freshDb();
   const path = await saveItem(db, 'tldr', 'Docker basics info.', {
     title: 'Docker Basics',
     tags: ['docker'],
@@ -78,7 +79,7 @@ Deno.test('readItem returns metadata and content', async () => {
 });
 
 Deno.test('deleteItem removes file and DB entry', async () => {
-  const db = freshDb();
+  const db = await freshDb();
   // Save first
   const path = await saveItem(db, 'snippet', 'Temp content', {
     title: 'Temp Item',
@@ -101,7 +102,7 @@ Deno.test('deleteItem removes file and DB entry', async () => {
 });
 
 Deno.test('slug dedup appends -2 for existing files', async () => {
-  const db = freshDb();
+  const db = await freshDb();
 
   // First save
   await saveItem(db, 'tldr', 'First', {
@@ -123,8 +124,8 @@ Deno.test('slug dedup appends -2 for existing files', async () => {
 
 // ── Search Tests ───────────────────────────────────────────────
 
-Deno.test('search by FTS text finds matching items', () => {
-  const db = freshDb();
+Deno.test('search by FTS text finds matching items', async () => {
+  const db = await freshDb();
 
   // Insert test data
   db.prepare(
@@ -146,8 +147,8 @@ Deno.test('search by FTS text finds matching items', () => {
   db.close();
 });
 
-Deno.test('search by type filters correctly', () => {
-  const db = freshDb();
+Deno.test('search by type filters correctly', async () => {
+  const db = await freshDb();
 
   db.prepare('INSERT INTO items (type, title, path, tags, created) VALUES (?, ?, ?, ?, ?)').run('snippet', 'S1', 's1.md', '[]', '2026-04-30');
   db.prepare('INSERT INTO items (type, title, path, tags, created) VALUES (?, ?, ?, ?, ?)').run('tldr', 'T1', 't1.md', '[]', '2026-04-30');
@@ -159,8 +160,8 @@ Deno.test('search by type filters correctly', () => {
   db.close();
 });
 
-Deno.test('search by lang filters correctly', () => {
-  const db = freshDb();
+Deno.test('search by lang filters correctly', async () => {
+  const db = await freshDb();
 
   db.prepare('INSERT INTO items (type, title, path, lang, tags, created) VALUES (?, ?, ?, ?, ?, ?)').run('snippet', 'R1', 'r1.md', 'rust', '[]', '2026-04-30');
   db.prepare('INSERT INTO items (type, title, path, lang, tags, created) VALUES (?, ?, ?, ?, ?, ?)').run(
@@ -179,8 +180,8 @@ Deno.test('search by lang filters correctly', () => {
   db.close();
 });
 
-Deno.test('search by tags matches any', () => {
-  const db = freshDb();
+Deno.test('search by tags matches any', async () => {
+  const db = await freshDb();
 
   db.prepare('INSERT INTO items (type, title, path, tags, created) VALUES (?, ?, ?, ?, ?)').run('snippet', 'A', 'a.md', '["json","parsing"]', '2026-04-30');
   db.prepare('INSERT INTO items (type, title, path, tags, created) VALUES (?, ?, ?, ?, ?)').run('snippet', 'B', 'b.md', '["xml"]', '2026-04-30');
@@ -192,8 +193,8 @@ Deno.test('search by tags matches any', () => {
   db.close();
 });
 
-Deno.test('search with limit', () => {
-  const db = freshDb();
+Deno.test('search with limit', async () => {
+  const db = await freshDb();
 
   for (let i = 0; i < 10; i++) {
     db.prepare('INSERT INTO items (type, title, path, tags, created) VALUES (?, ?, ?, ?, ?)').run('snippet', `Item ${i}`, `i${i}.md`, '[]', '2026-04-30');
@@ -205,8 +206,8 @@ Deno.test('search with limit', () => {
   db.close();
 });
 
-Deno.test('search with no matches returns empty', () => {
-  const db = freshDb();
+Deno.test('search with no matches returns empty', async () => {
+  const db = await freshDb();
   const results = search(db, { query: 'nonexistent' });
   assertEquals(results.length, 0);
   db.close();
@@ -214,8 +215,8 @@ Deno.test('search with no matches returns empty', () => {
 
 // ── Session Logger Tests ───────────────────────────────────────
 
-Deno.test('logSession inserts and returns ID', () => {
-  const db = freshDb();
+Deno.test('logSession inserts and returns ID', async () => {
+  const db = await freshDb();
 
   const id = logSession(db, {
     mode: 'ask',
@@ -235,8 +236,8 @@ Deno.test('logSession inserts and returns ID', () => {
   db.close();
 });
 
-Deno.test('logSession handles optional fields', () => {
-  const db = freshDb();
+Deno.test('logSession handles optional fields', async () => {
+  const db = await freshDb();
 
   const id = logSession(db, { mode: 'sandbox' });
   const row = db.prepare('SELECT * FROM sessions WHERE id = ?').get(id) as Record<string, unknown>;
@@ -250,7 +251,7 @@ Deno.test('logSession handles optional fields', () => {
 // ── Rebuild Index Tests ────────────────────────────────────────
 
 Deno.test('rebuildIndex reconstructs DB from files', async () => {
-  const db = freshDb();
+  const db = await freshDb();
   const tempLib = await Deno.makeTempDir({ prefix: 'coach-rebuild-' });
   await Deno.mkdir(join(tempLib, 'snippets', 'rust'), { recursive: true });
   await Deno.mkdir(join(tempLib, 'tldr'), { recursive: true });
@@ -278,7 +279,7 @@ Deno.test('rebuildIndex reconstructs DB from files', async () => {
 // ── Dashboard Tests ────────────────────────────────────────────
 
 Deno.test('regenerateDashboard creates README with content', async () => {
-  const db = freshDb();
+  const db = await freshDb();
   const tempLib = await Deno.makeTempDir({ prefix: 'coach-dash-' });
 
   // Add some data
@@ -301,7 +302,7 @@ Deno.test('regenerateDashboard creates README with content', async () => {
 });
 
 Deno.test('regenerateDashboard handles empty library', async () => {
-  const db = freshDb();
+  const db = await freshDb();
   const tempLib = await Deno.makeTempDir({ prefix: 'coach-dash-empty-' });
 
   await regenerateDashboard(db, tempLib);
@@ -317,7 +318,7 @@ Deno.test('regenerateDashboard handles empty library', async () => {
 // ── Non-interactive save (task 7.4) ────────────────────────────
 
 Deno.test('direct saveItem works without prompts', async () => {
-  const db = freshDb();
+  const db = await freshDb();
   const tempLib = await Deno.makeTempDir({ prefix: 'coach-direct-' });
   await Deno.mkdir(join(tempLib, 'snippets', 'go'), { recursive: true });
 

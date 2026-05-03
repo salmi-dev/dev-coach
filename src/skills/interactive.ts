@@ -2,7 +2,7 @@
  * Interactive framework — multi-response utilities for sandbox, review, etc.
  */
 
-import { Database } from '@db/sqlite';
+import { type Database } from '../db/sqlite/index.ts';
 import { saveItem, type SaveItemOptions } from '../storage/library.ts';
 import { readPromptLine } from '../utils/prompt.ts';
 

@@ -2,7 +2,7 @@
  * Session logger — record skill interactions to the sessions table.
  */
 
-import { Database } from '@db/sqlite';
+import { type Database } from './sqlite/index.ts';
 
 /** Parameters accepted by {@link logSession}. */
 export interface LogSessionParams {

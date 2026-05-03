@@ -7,7 +7,7 @@
  */
 
 import { parseArgs } from '@std/cli/parse-args';
-import { Database } from '@db/sqlite';
+import { type Database } from '../db/sqlite/index.ts';
 import { runtime } from '../utils/runtime/index.ts';
 import { readPromptLine } from '../utils/prompt.ts';
 import { deleteItem, type ItemType, listSlugs, resolveSlug, type SlugMatch } from '../storage/library.ts';
@@ -41,7 +41,7 @@ const ACTIONS = new Set(['list', 'show', 'search', 'edit', 'delete', 'path']);
 export async function runLibraryCommand(type: ItemType, args: string[], configPath?: string): Promise<void> {
   const config = await loadConfig(configPath);
   const libraryPath = getLibraryPath(config.library_path);
-  const db = getDb();
+  const db = await getDb();
 
   try {
     await dispatch(type, args, db, libraryPath);

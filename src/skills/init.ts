@@ -69,7 +69,7 @@ export async function runInit(args: string[], configOverride?: string): Promise<
   console.log(`\n✅ Config written to ${configPath}`);
 
   // Create database (triggers migrations)
-  getDb();
+  await getDb();
   closeDb();
   console.log('✅ Database created');
 

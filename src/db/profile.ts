@@ -2,7 +2,7 @@
  * Profile builder — infer user profile from session history.
  */
 
-import { Database } from '@db/sqlite';
+import { type Database } from './sqlite/index.ts';
 
 /**
  * Rebuild profile from sessions table. Writes computed data to profile table.

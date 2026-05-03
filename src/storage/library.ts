@@ -3,7 +3,7 @@
  */
 
 import { dirname, join } from '@std/path';
-import { Database } from '@db/sqlite';
+import { type Database } from '../db/sqlite/index.ts';
 import { runtime } from '../utils/runtime/index.ts';
 import { type BaseFrontmatter, parseFrontmatter, serializeFrontmatter } from './frontmatter.ts';
 import { indexItem, removeIndex } from './sync.ts';
