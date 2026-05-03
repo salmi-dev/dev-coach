@@ -112,10 +112,6 @@ jobs:
             os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             ext: ''
-          - name: macos-x86_64
-            os: macos-13
-            target: x86_64-apple-darwin
-            ext: ''
           - name: macos-aarch64
             os: macos-latest
             target: aarch64-apple-darwin
