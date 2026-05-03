@@ -180,16 +180,15 @@ The `Release` workflow SHALL build native binaries for the following targets via
 | Artifact name          | Runner           | `--target`                 | Suffix |
 | ---------------------- | ---------------- | -------------------------- | ------ |
 | `coach-linux-x86_64`   | `ubuntu-latest`  | `x86_64-unknown-linux-gnu` | (none) |
-| `coach-macos-x86_64`   | `macos-13`       | `x86_64-apple-darwin`      | (none) |
 | `coach-macos-aarch64`  | `macos-latest`   | `aarch64-apple-darwin`     | (none) |
 | `coach-windows-x86_64` | `windows-latest` | `x86_64-pc-windows-msvc`   | `.exe` |
 
 Each build SHALL invoke `deno compile` with the same permissions used by `deno task build` (`--allow-read --allow-write --allow-env --allow-run --allow-ffi`).
 
-#### Scenario: All four binaries are produced
+#### Scenario: All three binaries are produced
 
 - **WHEN** the `Release` workflow completes successfully
-- **THEN** four artifacts (`coach-linux-x86_64`, `coach-macos-x86_64`, `coach-macos-aarch64`, `coach-windows-x86_64`) SHALL exist
+- **THEN** three artifacts (`coach-linux-x86_64`, `coach-macos-aarch64`, `coach-windows-x86_64`) SHALL exist
 - **AND** each artifact SHALL include a `.sha256` file alongside the binary
 
 #### Scenario: One target's build failure does not cancel the others
@@ -205,7 +204,7 @@ and publish a GitHub Release at the bumped tag using `softprops/action-gh-releas
 #### Scenario: Release page contains all binaries
 
 - **WHEN** the `Release` workflow finishes
-- **THEN** a GitHub Release at tag `vX.Y.Z` SHALL exist with the four `coach-*` binaries attached
+- **THEN** a GitHub Release at tag `vX.Y.Z` SHALL exist with the three `coach-*` binaries attached
 - **AND** auto-generated release notes SHALL be present
 - **AND** SLSA build provenance SHALL be attested for every `coach-*` artifact
 
